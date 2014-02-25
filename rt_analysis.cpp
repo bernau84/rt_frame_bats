@@ -1,6 +1,62 @@
 #include "rt_analysis.h"
 #include "rt_basictypes.h"
 
+
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+//do budoucna lepsi nacitat to z ini_file
+
+const double def_allps_num[] = {
+                                        1.0
+                                };
+const double def_allps_den[] = {
+                                        0.0
+                                };
+
+
+const double def_01cpb_num[1][6*3] =    {
+                                            {
+                                                #include "include/1_1elip_num.h"
+                                            }
+                                        };
+const double def_01cpb_den[1][6*3] =    {
+                                            {
+                                                #include "include/1_1elip_den.h"
+                                            }
+                                        };
+const double def_03cpb_num[3][3*3] = {  {
+                                        //#include "include/3_3inv_num.h"
+                                        #include "include/3_3cheb_num.h"
+                                        }, {
+                                        //#include "include/2_3inv_num.h"
+                                        #include "include/2_3cheb_num.h"
+                                        }, {
+                                        //#include "include/1_3inv_num.h"
+                                        #include "include/1_3cheb_num.h"
+                                     }  };
+const double def_03cpb_den[3][3*3] = {  {
+                                        //#include "include/3_3inv_den.h"
+                                        #include "include/3_3cheb_den.h"
+                                        }, {
+                                        //#include "include/2_3inv_den.h"
+                                        #include "include/2_3cheb_den.h"
+                                        }, {
+                                        //#include "include/1_3inv_den.h"
+                                        #include "include/1_3cheb_den.h"
+                                     }  };
+const double def_12cpb_num[12][3*2] = {
+                                        {0} //#include "01cpb_num.h"
+                                    };
+const double def_12cpb_den[12][3*2] = {
+                                        {0} //#include "01cpb_num.h"
+                                    };
+const double def_24cpb_num[24][3*1] = {
+                                        {0} //#include "03cpb_num.h"
+                                    };
+const double def_24cpb_den[24][3*1] = {
+                                        {0} //#include "03cpb_num.h"
+                                    };
+
 //---------------------------------------------------------------------------
 t_rt_analysis::t_rt_analysis(QObject *parent):
     t_rt_base(parent)
@@ -22,16 +78,25 @@ void t_rt_analysis::pause(){
 t_rt_cpb::t_rt_cpb(QObject *parent):
     t_rt_analysis(parent)
 {
-    set.insert("Multibuffer", t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", 4));
-    set.insert("Octaves", t_setup_entry(set.vlist() << 8 << 10 << 12 << 14, ""));
-    set.insert("Bands", t_setup_entry(set.vlist() << 1 << 3 << 12 << 24,
-        set.slist() << "1_cheby" << "3_cheby" << "12_cheby" << "24_cheby", 1, true));
+    set.initdef("Multibuffer", t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", 4));
+    set.initdef("Octaves", t_setup_entry(set.vlist() << 8 << 10 << 12 << 14, ""));
+    set.initdef("Bands", t_setup_entry(set.vlist() << 1 << 3 << 12 << 24, "", 1, true));
 
-    //set.slist() << "1_elliptic" << "3_elliptic" << "12_elliptic" << "24_elliptic"
+    set.initdef("Time", t_setup_entry(
+                    set.vlist() << 1.0 << 1.0/2 << 1.0/4 << 1.0/8 << 1.0/16 << 1.0/32 << 1.0/64,
+                    set.slist() << "slow [1s]" << "slow [1/2s]" << "normal [1/4s]" << "normal [1/8s]"
+                                << "fast [1/16s]" << "fast [1/32s]" << "fast [1/64s]", 3));
 
-    set.insert("Time", t_setup_entry(set.vlist() << 1.0 << 1.0/2 << 1.0/4 << 1.0/8 << 1.0/16 << 1.0/32 << 1.0/64,
-        set.slist() << "slow [1s]" << "slow [1/2s]" << "normal [1/4s]" << "normal [1/8s]" <<
-               "fast [1/16s]" << "fast [1/32s]" << "fast [1/64s]", 3));
+
+    double tdef_decim[] = {
+       #include "include/a_3fir.h"
+    };
+
+    QVariantList list_def_decim =
+        QVariantList::fromStdList(std::list<double>(&tdef_decim[0], &tdef_decim[sizeof(tdef_decim) / sizeof(double)]));
+
+    set.initdef("FirDeciCoe", t_setup_entry(list_def_decim));
+
 
     t_DirectFilter dnum((double *)def_allps_num, (double *)0, sizeof(def_allps_num)/sizeof(double));
     t_DirectFilter dden((double *)def_decim_num, (double *)0, sizeof(def_decim_num)/sizeof(double), 2);

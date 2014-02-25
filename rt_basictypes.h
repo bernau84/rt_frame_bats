@@ -13,7 +13,7 @@ class t_collection_entry;
 /*! hodonoty nastaveni
  * podporuje klice / menu / min / max / default / multiselect
  */
-class t_setup_entry : private QMap<QString, QVariant> {
+class t_setup_entry : public QMap<QString, QVariant> {
 
 private:
 
@@ -112,6 +112,13 @@ public:
 
         init(name, val, idef, autob);
     }
+
+    /*! jenoducha polozka - ma jen defaultni hodnotu
+     */
+    t_setup_entry(const QVariant &val){
+
+        insert("def", val);
+    }
 };
 
 
@@ -133,6 +140,45 @@ public:
 
         QStringList t;
         return t;
+    }
+
+    /*! \brief inicializace polozky ALE jen pokud uz neexistuje
+    */
+    bool initdef(const QString &title, const t_setup_entry &val){
+
+        if(contains(title)) return false;
+        insert(title, val);
+        return true;
+    }
+
+
+    /*! \brief export nastaveni prvku do json struktury
+     *  vysledkem je seznam bjetu kde kady je jednim prvkem
+     * a obsahuje podobekty jako "val", "min", "min", "max", a seznam predefinovanych hodnot
+    */
+    void tojson(QJsonArray &list){
+
+        /* podpora ukladani menu vcetne multival selectu klicu a preddefinovanych hodnot */
+        /* map -> json leze ale nepodporuje multivalue z toho duvodu to nemuzem udelat rovnou */
+
+        QMap<QString, int>::const_iterator i;
+        for (i = constBegin(); i != constEnd(); ++i){
+
+            QJsonArray mval = fromVarinatList(i.value().getm());   //seznam multival hodnot
+            QJsonObject options = QJsonObject::fromVariantMap(i.value());  //a mame skoro hotovo..
+            options.insert("val", mval);  //..jen multival selest musim ulozit jako pole protoze to jinak prevede jen 1. hodnotu
+
+            QJsonObject param; //kazdy parametr musi byt pojmenovan -> musi to byt objekt
+            param.insert(i.key(), options);
+            list.append(ji);  //pridame
+        }
+    }
+
+    /*! \brief import z json */
+    void fromjson(){
+
+        /*! \todo - az budu umet export */
+
     }
 
 };

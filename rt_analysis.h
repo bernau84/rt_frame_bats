@@ -7,67 +7,6 @@
 #include "t_rt_base.h"
 #include "freq_analysis.h"
 
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-//do budoucna lepsi nacitat to z ini_file
-
-const double def_allps_num[] = {
-                                        1.0
-                                };
-const double def_allps_den[] = {
-                                        0.0
-                                };
-
-const double def_decim_num[] = {   //podle toho jestli IIR nebo FIR - preventivne tak i cit a jmen s max 256 cleny
-                                        #include "include/a_3fir.h"
-                                  };
-const double def_decim_den[] = {
-                                        0.0
-                                  };
-
-const double def_01cpb_num[1][6*3] =    {
-                                            {
-                                                #include "include/1_1elip_num.h"
-                                            }
-                                        };
-const double def_01cpb_den[1][6*3] =    {
-                                            {
-                                                #include "include/1_1elip_den.h"
-                                            }
-                                        };
-const double def_03cpb_num[3][3*3] = {  {
-                                        //#include "include/3_3inv_num.h"
-                                        #include "include/3_3cheb_num.h"
-                                        }, {
-                                        //#include "include/2_3inv_num.h"
-                                        #include "include/2_3cheb_num.h"
-                                        }, {
-                                        //#include "include/1_3inv_num.h"
-                                        #include "include/1_3cheb_num.h"
-                                     }  };
-const double def_03cpb_den[3][3*3] = {  {
-                                        //#include "include/3_3inv_den.h"
-                                        #include "include/3_3cheb_den.h"
-                                        }, {
-                                        //#include "include/2_3inv_den.h"
-                                        #include "include/2_3cheb_den.h"
-                                        }, {
-                                        //#include "include/1_3inv_den.h"
-                                        #include "include/1_3cheb_den.h"
-                                     }  };
-const double def_12cpb_num[12][3*2] = {
-                                        {0} //#include "01cpb_num.h"
-                                    };
-const double def_12cpb_den[12][3*2] = {
-                                        {0} //#include "01cpb_num.h"
-                                    };
-const double def_24cpb_num[24][3*1] = {
-                                        {0} //#include "03cpb_num.h"
-                                    };
-const double def_24cpb_den[24][3*1] = {
-                                        {0} //#include "03cpb_num.h"
-                                    };
-
 #define RT_MAX_OCTAVES_NUMBER      20
 #define RT_MAX_BANDS_PER_OCTAVE    24
 
