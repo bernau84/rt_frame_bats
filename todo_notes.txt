@@ -1,0 +1,18 @@
+TO DO
+
+Indikace rizika preteceni / preteceni
+- indikaci mohu vyrobit stopovanim zporacovani jedna davky;
+    vim jakou frekvenci to vzorkovac dava, takze vim jak rychle to musim zpracovat
+- preteceni je jasne - to mam v multibufferu
+- nejak to indikovat ve statusu?
+
+Napojeni plotu
+- az budu delat tak pres queue signaly a tim ze ve fronte muze byt takovy pozadavek pouze 1x
+- aby to nerusilo; tady asi nebude vadit kdyz nebudu stihat
+
+
+NOTES
+
+* preprocess vyhodime, vyuzijem usus ze na jakykoli prvek muzem napojit jakykoli dalsi - rozhranni je identicke
+
+? vicevstupy nod?
