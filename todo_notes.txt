@@ -10,6 +10,14 @@ Napojeni plotu
 - az budu delat tak pres queue signaly a tim ze ve fronte muze byt takovy pozadavek pouze 1x
 - aby to nerusilo; tady asi nebude vadit kdyz nebudu stihat
 
+Konfigurace
+- defaultni kjonfig soucasti resourcu (zdrojaku) at to nestrasi v kodu
+- json vsude
+- nemame vyresene jak se bude rozlisovat mezi enumem a prvek s dovnou konf - asi tak ze tam bude to min a max!
+- merge user a default jcon konfigurace (asi jen pokud existuje v user tak se tim prepise)
+- jak resit konfiguraci zapojeni prvku? (ale a project file?)
+- jak pojmenovavat jednitlive souboru k jednotlivym prvkum
+- predeat import/export aby ignoroval info polozky
 
 NOTES
 

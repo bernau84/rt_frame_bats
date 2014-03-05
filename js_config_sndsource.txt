@@ -1,0 +1,41 @@
+
+[
+    "Multibuffer": {
+        _i: "size of Z buffer (number of slices)",
+        _v: [
+                {"small(10)": 10},
+                {"norm(30)": 30},
+                {"med(50)": 50},
+                {"long(70)": 70},
+                {"wide(100)": 100},
+                {"def": 30},
+                {"min": 1}
+        ],
+    },
+    "Time": {
+        _i: "duration of one time slice in multibuffer",
+        _v: [
+                {"slow 1s": 1.0},
+                {"slow 1/2s": 0.5},
+                {"norm 1/4s": 0.25},
+                {"norm 1/8s": 0.125},
+                {"fast 1/16s": 0.0625},
+                {"fast 1/32s": 0.03125},
+                {"instant": 0},
+                {"def": 0.125},
+                {"min": 0.001},
+        ]
+    },
+    "__refresh_rate": {
+        _i: "inner rate of refresh multibuffer",
+        _v: [
+                {"1x": 1.0},
+                {"2x": 0.5},
+                {"5x": 0.25},
+                {"10x": 0.125},
+                {"100x": 0.0625},
+                {"def": 0.125},
+                {"min": 0.001},
+        ]
+    }
+]

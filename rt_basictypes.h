@@ -141,6 +141,14 @@ public:
         QStringList t;
         return t;
     }
+    
+    template<T> QVariantList vlist(T *v, int n){    //pomocna fce
+
+        QVariantList t;
+        for(int i=0; i<n; i++) t << *v++;
+        return t;
+    }
+
 
     /*! \brief inicializace polozky ALE jen pokud uz neexistuje
     */
@@ -153,7 +161,7 @@ public:
 
 
     /*! \brief export nastaveni prvku do json struktury
-     *  vysledkem je seznam bjetu kde kady je jednim prvkem
+     *  vysledkem je seznam objetu kde kazdy je jednim prvkem
      * a obsahuje podobekty jako "val", "min", "min", "max", a seznam predefinovanych hodnot
     */
     void tojson(QJsonArray &list){
@@ -164,7 +172,7 @@ public:
         QMap<QString, int>::const_iterator i;
         for (i = constBegin(); i != constEnd(); ++i){
 
-            QJsonArray mval = fromVarinatList(i.value().getm());   //seznam multival hodnot
+            QJsonArray mval = fromVariantList(i.value().getm());   //seznam multival hodnot
             QJsonObject options = QJsonObject::fromVariantMap(i.value());  //a mame skoro hotovo..
             options.insert("val", mval);  //..jen multival selest musim ulozit jako pole protoze to jinak prevede jen 1. hodnotu
 

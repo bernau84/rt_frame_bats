@@ -23,7 +23,7 @@ t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
     set.insert("Refresh", t_setup_entry(set.vlist() << 10 << 20 << 50 << 100 << 200 << 500, "ms", 3, true));
     set.insert("Multibuffer", t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", 0, true));
 
-    /*! @todo - sem vrazit pripadne nejake prevzorkovani; prumerovani*/
+    /*! @todo - sem vrazit pripadne nejake prevzorkovani pokud je vstupni frekvence jina nez prehravaci*/
 
     //zvolime defaultni vzorkovacku
     sta.fs_out = sta.fs_in = set["Rates"].set(8000); //nastavime 8Khz - tedy pokud tam jsou, jinak zustava 1. hodnota
@@ -172,10 +172,9 @@ void t_rt_output::change(){
     }
 
     sta.fs_out = format.frequency();
-    sta.fs_in = &sta.fs_out;   //dany predcozi prvek def. vzorkovacku neni
 
     int N = set["Multibuffer"].get().toInt();
-    int M = set["Refresh"].get().toInt() / 1000.0 * sta.fs_out;
+    int M = set["Time"].get().toInt() / 1000.0 * sta.fs_out;
 
     t_slcircbuf::resize(M); //novy vnitrni multibuffer
 
