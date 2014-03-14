@@ -19,7 +19,8 @@ public slots:
     void pause();
 
 public:
-    t_rt_analysis(QObject *parent = 0);
+    t_rt_analysis(QObject *parent = 0, QDir &config);
+    virtual ~t_rt_analysis(){;}
 };
 
 class t_rt_cpb : public t_rt_analysis
@@ -39,7 +40,8 @@ public slots:
     void change();
 
 public:
-    t_rt_cpb(QObject *parent = 0);
+    t_rt_cpb(QObject *parent = 0, QDir &config);
+    virtual ~t_rt_cpb();
 
 };
 
@@ -62,7 +64,8 @@ public slots:
     void change();
 
 public:
-    t_rt_shift(QObject *parent = 0);
+    t_rt_shift(QObject *parent = 0, QDir &config);
+    virtual ~t_rt_shift();
 
 };
 

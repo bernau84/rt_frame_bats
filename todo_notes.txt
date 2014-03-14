@@ -19,8 +19,15 @@ Konfigurace
 - jak pojmenovavat jednitlive souboru k jednotlivym prvkum
 - predeat import/export aby ignoroval info polozky
 
+?! inheritance operatoru? asi ano ale co to jako dela? =
+
 NOTES
 
 * preprocess vyhodime, vyuzijem usus ze na jakykoli prvek muzem napojit jakykoli dalsi - rozhranni je identicke
 
 ? vicevstupy nod?
+
+
+
+chennet cabernet sirah
+chille cervene

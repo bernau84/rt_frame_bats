@@ -2,127 +2,149 @@
 #define RT_BASICTYPES_H
 
 #include <QString>
-#include <QVariant>
-#include <QList>
-#include <QMap>
-#include <QStringList>
-#include <QVariantList>
+#include <QObject>
+#include <QJsonDocument>
 
 class t_collection_entry;
 
 /*! hodonoty nastaveni
  * podporuje klice / menu / min / max / default / multiselect
  */
-class t_setup_entry : public QMap<QString, QVariant> {
+class t_setup_entry : public QJsonObject {
+
+public:
+    enum t_restype { INFO, MIN, MAX, DEF, VAL, ANY };
 
 private:
 
-    enum restype { MIN, MAX, DEF, ENUM, UNDEF };
+    void insert(t_restype f, const QJsonValue &val){
 
-    void init(const QString &name, const QVariant &val, uint tmap = 0){
+        switch(f){
 
-        insert(name, val);
-        if((1 << DEF) & tmap) insertMulti("def", val);  //tech muze byt vicero
-        else if((1 << MIN) & tmap) insert("min", val);
-        else if((1 << MAX) & tmap) insert("max", val);
-        else if(0){;}
+            case DEF: insert("__def", val); break;
+            case MIN: insert("__min", val); break;
+            case MAX: insert("__max", val); break;
+            case INFO: insert("__info", val); return;
+        };
     }
 
-    void init(const QStringList &name, const QVariantList &val, int idef = 0, bool autob = false){
+    void init(const QStringList &name, const QJsonArray &val){
 
         int N = qMin(name.count(), val.count());
-        for(int n=0; n<N; n++){
-
-            uint mask = 0;
-            mask |= (idef == n) ? (1 << DEF) : 0;
-            mask |= ((autob) && (n == 0)) ? (1 << MIN) : 0;
-            mask |= ((autob) && (n == N-1)) ? (1 << MAX) : 0;
-            init(name[n], val[n], mask);
-        }
+        for(int n=0; n<N; n++)
+            insert(name[n], val[n], mask);
     }
 
 public:
 
-    /*! read actual number */
-    QVariant get(QString name = QString("val")){
+    /*! \brief read actual number */
+    QJsonValue get(QString name = QString("__val")){
 
-        return value(name, value("def"));
+        return value(name, value("__def"));
     }
 
-    QVariantList getm(QString title = QString("val")){
+    /*! \brief read actual number */
+    QJsonValue get(t_restype t = VAL){
 
-        return values(title);
+        switch(f){
+
+            case MIN: get("__min"); return;
+            case MAX: get("__max"); return;
+            case INFO: get("__info"); return;
+            case INFO: get("__val"); return;
+        }
+
+        return get("__def");
     }
 
-    /*! set arbitrary value between boundaries
+    /*! \brief read multivalue */
+    QJsonArray getm(QString title = QString("val")){
+
+        return get(title).toArray();
+    }
+
+    /*! \brief set arbitrary value between boundaries
      * assumes vales can be converted to double for
      * min max comparison
      */
-    QVariant set(const QVariant &val){
+    QJsonValue set(const QJsonValue &val){
 
-        QMap<QString, QVariant>::const_iterator i_max = find("max");
-        QMap<QString, QVariant>::const_iterator i_min = find("min");
+        QJsonObject::const_iterator i_max = find("__max");
+        QJsonObject::const_iterator i_min = find("__min");
+        QJsonObject::Type t = val.type();
 
-        double v_min = i_min.value().toDouble();
-        double v_max = i_max.value().toDouble();
+        if(val.isDouble()){
 
-        if((i_min != constEnd()) && (v_min > val.toDouble()))
-            insert("val", i_min.value());
-        else if((i_max != constEnd()) && (v_max < val.toDouble()))
-            insert("val", i_max.value());
+            if((i_max != constEnd()) && (i_max->isDouble()))
+                if(val.toDouble() > i_max->toDouble())
+                    return insert("__val", i_max->value())->value();
 
-        return get();
+            if((i_min != constEnd()) && (i_min->isDouble()))
+                if(val.toDouble() < i_min->toDouble())
+                    return insert("__val", i_min->value())->value();
+        }
+
+        return insert("__val", val)->value();
     }
 
-    /*! add new predefined value and select it*/
-    QVariant set(const QString &name, const QVariant &val, restype t = UNDEF){
+    /*! \brief convert attribute value to double array
+     */
+    int db(const QString &name, double *v, int N){
 
-        init(name, val, 1 << t);
+        int n = 0;
+        QJsonArray ar;
+
+        if(!v || !N || !((ar = value[name]).isArray()))
+            return 0;
+
+        foreach(QJsonValue vv, ar)
+            if((vv.isDouble()) && (++n < N))
+                *v++ = vv.toDouble();
+
+        return n;
+    }
+
+
+    /*! \brief add new predefined value and select it*/
+    QJsonValue set(const QString &name, const QJsonValue &val, restype t = UNDEF){
+
+        if(UNDEF != t) init(name, val, t);
+            else init(name, val);
+
         return sel(name);
     }
 
-    /*! from enum menu or min, max, def, val keywords */
-    QVariant sel(const QString &name){
+    /*! \brief from enum menu or min, max, def, val keywords */
+    QJsonValue sel(const QString &name){
 
-        return insert("val", value(name)).value();
+        return insert("__val", value(name)).value();
     }
 
-    /*! from enum menu o min, max, def, val keywords */
-    QVariant selm(const QString &name){
-
-        return insertMulti("val", value(name)).value();
-    }
-
-    /*! seznam dovolenych prvku - idef je index defaultniho (pokud <0 pak zadny neni),
+    /*! \brief seznam dovolenych prvku - idef je index defaultniho (pokud <0 pak zadny neni),
      *  autob jsou automaticke meze (min je prvni, max poslednim porvkem)
      */
-    t_setup_entry(const QVariantList &val, const QStringList &name, int idef = 0, bool autob = false){
+    t_setup_entry(const QJsonArray &val, const QStringList &name){
 
-        init(name, val, idef, autob);
+        init(name, val);
     }
 
-    /*! seznam dovolenych prvku - idef je index defaultniho (pokud <0 pak zadny neni),
-     *  autob jsou automaticke meze (min je prvni, max poslednim porvkem)
+    /*! \brief simple default item
      */
-    t_setup_entry(const QVariantList &val, QString unit, int idef = 0, bool autob = false){
+    t_setup_entry(const QJsonValue &val){
 
-        QStringList name;
-        for(int n=0; n<val.count(); n++)
-            name << val[n].toString() + unit;
-
-        init(name, val, idef, autob);
+        insert("__def", val);
     }
 
-    /*! jenoducha polozka - ma jen defaultni hodnotu
+    /*! \brief create & inicialize
      */
-    t_setup_entry(const QVariant &val){
+    t_setup_entry(const QJsonObject &val = QJsonObject()):
+        QJsonObject(val){
 
-        insert("def", val);
     }
 };
 
 
-class t_collection_entry : public QMap<QString, t_setup_entry>, public QObject {
+class t_collection_entry : public QObject, QJsonObject {
 
     Q_OBJECT
 signals:
@@ -130,65 +152,53 @@ signals:
 
 public:
 
-    QVariantList vlist(){    //pomocna fce
+    /*! helpers */
+    QJsonArray vlist(){  QJsonArray t; return t; }
 
-        QVariantList t;
-        return t;
-    }
-
-    QStringList slist(){    //pomocna fce
-
-        QStringList t;
-        return t;
-    }
+    QStringList slist(){  QStringList t; return t; }
     
-    template<T> QVariantList vlist(T *v, int n){    //pomocna fce
+    template<T> QJsonArray vlist(const T *v, int n){
 
-        QVariantList t;
-        for(int i=0; i<n; i++) t << *v++;
+        QJsonArray t;
+        for(int i=0; (i<n) && (v); i++) t << *v++;
         return t;
     }
 
-
-    /*! \brief inicializace polozky ALE jen pokud uz neexistuje
+    /*! \brief update from user
+     *  \return number of succesfuly updated attributes (only that which was already contained)
+     * inserting is not supported
     */
-    bool initdef(const QString &title, const t_setup_entry &val){
+    int update(t_setup_entry &attributes){
 
-        if(contains(title)) return false;
-        insert(title, val);
-        return true;
-    }
+        int ret = 0;
+        QStringList kl = attributes.keys();
+        for(QStringList::const_iterator ki = kl.constBegin(); ki != kl.constEnd(); ki++){
 
+            QJsonObject::iterator oi = find(ki);
+            if(oi == end())
+                continue;
 
-    /*! \brief export nastaveni prvku do json struktury
-     *  vysledkem je seznam objetu kde kazdy je jednim prvkem
-     * a obsahuje podobekty jako "val", "min", "min", "max", a seznam predefinovanych hodnot
-    */
-    void tojson(QJsonArray &list){
-
-        /* podpora ukladani menu vcetne multival selectu klicu a preddefinovanych hodnot */
-        /* map -> json leze ale nepodporuje multivalue z toho duvodu to nemuzem udelat rovnou */
-
-        QMap<QString, int>::const_iterator i;
-        for (i = constBegin(); i != constEnd(); ++i){
-
-            QJsonArray mval = fromVariantList(i.value().getm());   //seznam multival hodnot
-            QJsonObject options = QJsonObject::fromVariantMap(i.value());  //a mame skoro hotovo..
-            options.insert("val", mval);  //..jen multival selest musim ulozit jako pole protoze to jinak prevede jen 1. hodnotu
-
-            QJsonObject param; //kazdy parametr musi byt pojmenovan -> musi to byt objekt
-            param.insert(i.key(), options);
-            list.append(ji);  //pridame
+            *io = attributes[ki];
+            ret += 1;
         }
+
+        return ret;
     }
 
-    /*! \brief import z json */
-    void fromjson(){
+    /*! \brief acces attribute
+    */
+    const t_setup_entry ask(const QString &title){
 
-        /*! \todo - az budu umet export */
-
+        t_setup_entry v(value[attribute]);
+        return v;
     }
 
+    /*! \brief create & inicialize
+     */
+    explicit t_collection_entry(QObject *parent = 0, QJsonObject &def = QJsonObject()):
+        QObject(parent), QJsonObject(def){
+
+    }
 };
 
 #endif // RT_BASICTYPES_H

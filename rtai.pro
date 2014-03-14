@@ -38,3 +38,6 @@ OTHER_FILES += \
     js_config_sndsource.txt \
     js_config_sndsink.txt
 
+RESOURCES += \
+    rt_res_defaults.qrc
+

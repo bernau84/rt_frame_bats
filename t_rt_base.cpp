@@ -1,7 +1,7 @@
 #include "t_rt_base.h"
 
-t_rt_base::t_rt_base(QObject *parent) :
-    QObject(parent), t_slcircbuf(0)
+t_rt_base::t_rt_base(QObject *parent, QDir &config) :
+    QObject(parent), set(config), t_slcircbuf(0)
 {
     sta.fs_in = (double *)0; //vstupni fs
     sta.fs_out = 0; //vystuni fs
@@ -18,6 +18,17 @@ t_rt_base::t_rt_base(QObject *parent) :
         t_rt_base *pre = dynamic_cast<t_rt_base *>(parent);
         if(!pre) return; //navazujem na kompatibilni prvek? to do test!
         rd_i = pre->attach(this);    //nastavi sta.fs_in a rd_I
+    }
+
+    QFile f_res(config);
+    if(f_res.open(QIODevice::ReadOnly | QIODevice::Text)){
+
+        QByteArray f_data = f_res.read(64000);
+        QJsonDocument js_doc = QJsonDocument::fromJson(f_data);
+        if(!js_doc.isEmpty()){
+
+            set = js_doc.object();
+        }
     }
 }
 

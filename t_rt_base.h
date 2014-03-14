@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTime>
+#include <QDir>
 #include "rt_multibuffer.h"
 #include "rt_basictypes.h"
 
@@ -54,7 +55,7 @@ protected:
 public:
     t_collection_entry set;
     t_rt_status sta;
-    explicit t_rt_base(QObject *parent = 0);
+    explicit t_rt_base(QObject *parent = 0, QDir &config);
 
     int attach(t_rt_base *next);  //vraci index pod kterym muze pristupovat do multibufferu
 

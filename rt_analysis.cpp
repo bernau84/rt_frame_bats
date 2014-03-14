@@ -1,20 +1,6 @@
 #include "rt_analysis.h"
 #include "rt_basictypes.h"
 
-
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-//do budoucna lepsi nacitat to z ini_file
-
-const double def_allps_num[] = {
-                                        1.0
-                                };
-const double def_allps_den[] = {
-                                        0.0
-                                };
-
-
-
 //---------------------------------------------------------------------------
 t_rt_analysis::t_rt_analysis(QObject *parent):
     t_rt_base(parent)
@@ -33,81 +19,18 @@ void t_rt_analysis::pause(){
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
-t_rt_cpb::t_rt_cpb(QObject *parent):
-    t_rt_analysis(parent)
+t_rt_cpb::t_rt_cpb(QObject *parent, QDir &config):
+    t_rt_analysis(parent, config)
 {
-    set.initdef("Multibuffer", t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", 4));
-    set.initdef("Octaves", t_setup_entry(set.vlist() << 8 << 10 << 12 << 14, ""));
-    set.initdef("Bands", t_setup_entry(set.vlist() << 1 << 3 << 12 << 24, "", 1, true));
+    int rN, N = 1024;
+    double coe[N];
 
-    set.initdef("Time", t_setup_entry(
-                    set.vlist() << 1.0 << 1.0/2 << 1.0/4 << 1.0/8 << 1.0/16 << 1.0/32 << 1.0/64,
-                    set.slist() << "slow [1s]" << "slow [1/2s]" << "normal [1/4s]" << "normal [1/8s]"
-                                << "fast [1/16s]" << "fast [1/32s]" << "fast [1/64s]", 3));
+    rN = set.ask("__def_allps_num").db("num", coe, N);
+    t_DirectFilter dnum(coe, (double *)0, rN);
 
+    rN = set.ask("__def_decim_num").db("num", coe, N);
+    t_DirectFilter dden(coe, (double *)0, rN, 2);
 
-    double tdef_decim[] = {
-       #include "include/a_3fir.h"
-    };
-    
-    set.initdef("DirectFir_OctDeci", t_setup_entry(set.vlist(list_def_decim, sizeof(list_def_decim)/sizeof(double)), 
-                                                   set.slist() << "num"));
-
-    double tdef_01cpb_num[1][] = {{
-        #include "include/1_1elip_num.h"
-    }};
-    
-    double tdef_01cpb_den[1][] = {{
-        #include "include/1_1elip_den.h"
-    }};
-    
-    
-    set.initdef("Biquad_01cpb", t_setup_entry(set.vlist() << set.vlist(tdef_01cpb_num, sizeof(tdef_01cpb_num)/sizeof(double))
-                                                            << set.vlist(tdef_01cpb_den, sizeof(tdef_01cpb_den)/sizeof(double)), 
-                                              set.slist() << "num" << "den"));
-    
-    
-    double tdef_03cpb_num[3][] = {{
-            #include "include/3_3cheb_num.h"    //#include "include/3_3cheb_num.h"
-        }, {
-            #include "include/2_3cheb_num.h"    //#include "include/2_3inv_num.h"
-        }, {
-            #include "include/1_3cheb_num.h"    //#include "include/1_3inv_num.h"
-     }};
-    
-    double tdef_03cpb_den[3][] = {{
-            #include "include/3_3cheb_den.h"    //#include "include/3_3inv_den.h"
-        }, {
-            #include "include/2_3cheb_den.h"    //#include "include/2_3inv_den.h"
-        }, {
-            #include "include/1_3cheb_den.h"    //#include "include/1_3inv_den.h"
-    }};
-    
-    int numn = sizeof(tdef_01cpb_num)/sizeof(double)/3;
-    int denn = sizeof(tdef_01cpb_den)/sizeof(double)/3;
-    
-    set.initdef("Biquad_03cpb", t_setup_entry(set.vlist() << set.vlist(tdef_03cpb_num[0], numn) << set.vlist(tdef_03cpb_den[0], den) 
-                                                            << set.vlist(tdef_03cpb_num[1], numn) << set.vlist(tdef_03cpb_den[1], den)
-                                                            << set.vlist(tdef_03cpb_num[2], numn) << set.vlist(tdef_03cpb_den[2], den),
-                                              set.slist() << "num1" << "den1" << "num2" << "den2" << "num3`" << "den3"));
-    
-    
-    
-    double tdef_12cpb_num[12][] = {
-        {0} //#include "01cpb_num.h"
-    };
-    double tdef_12cpb_den[12][] = {
-        {0} //#include "01cpb_num.h"
-    };
-    double tdef_24cpb_num[24][] = {
-        {0} //#include "03cpb_num.h"
-    };
-    double tdef_24cpb_den[24][] = {
-        {0} //#include "03cpb_num.h"
-    };
-
-    t_DirectFilter dnum((double *)def_allps_num, (double *)0, sizeof(def_allps_num)/sizeof(double));
-    t_DirectFilter dden((double *)def_decim_num, (double *)0, sizeof(def_decim_num)/sizeof(double), 2);
     bank = new t_DiadicFilterBank(dnum, dden, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
 
     for(int i=0; i<RT_MAX_OCTAVES_NUMBER;                            i++) dline[i] = 0; //vynulujem
@@ -118,10 +41,26 @@ t_rt_cpb::t_rt_cpb(QObject *parent):
 }
 
 //---------------------------------------------------------------------------
+t_rt_cpb::~t_rt_cpb(){
+
+    if(bank)
+        delete bank;
+
+    for(int i=0; i<RT_MAX_OCTAVES_NUMBER; dline[i++] = 0)
+        if(dline[i]) delete dline[i];
+
+    for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE; aline[i++] = 0)
+        if(aline[i]) delete aline[i];
+
+    for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE; aver[i++] = 0)
+        if(aver[i]) delete aver[i];
+}
+
+//---------------------------------------------------------------------------
 void t_rt_cpb::process(){
 
-    int N = set["Octaves"].get().toInt();  //aktualni pocet oktav
-    int M = set["Bands"].get().toInt();  //pocet pasem na oktavu
+    int N = set.ask("Octaves").get().toInt();  //aktualni pocet oktav
+    int M = set.ask("Bands").get().toInt();  //pocet pasem na oktavu
 
     t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
     if(!pre) return; //navazujem na zdroj dat?
@@ -180,14 +119,14 @@ void t_rt_cpb::process(){
 //------------------------------------------------------------------------
 void t_rt_cpb::change(){
 
-    int N = set["Octaves"].get().toInt();  //aktualni pocet oktav
-    int M = set["Bands"].get().toInt();  //pocet pasem na oktavu
+    int N = set.ask("Octaves").get().toInt();  //aktualni pocet oktav
+    int M = set.ask("Bands").get().toInt();  //pocet pasem na oktavu
     t_rt_status::t_rt_a_sta pre_sta = sta.state;
 
     pause();
 
-    sta.fs_out = 1 / set["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    t_slcircbuf::resize(set["Slices"].get().toInt()); //novy vnitrni multibuffer
+    sta.fs_out = 1 / set.ask("Time").get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
+    t_slcircbuf::resize(set.ask("Slices").get().toInt()); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
     t_rt_slice dfs;
@@ -264,16 +203,15 @@ void t_rt_cpb::change(){
 t_rt_shift::t_rt_shift(QObject *parent):
     t_rt_analysis(parent)
 {
-    set["Multibuffer"] = t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", 4, true);
-    set["Bands"] = t_setup_entry(set.vlist() << 4 << 8 << 16 << 32, "equi_fir", 1, true);
-    set["Select"] = t_setup_entry(set.vlist() << 4 << 32, "", 0, true);    //prostredni pasmo zvolim jako default
+    int rn, N = 1024;
+    double coe[N];
 
-    /*! \todo - realne se musi "select" nabidla menit se zmenou pasem
-    * navic by mela umoznovat multiband select - coz pres sel() fci umoznuje
-    */
+    rN = set.ask("__def_allps_num").db("num", coe, N);
+    t_DirectFilter dnum(coe, (double *)0, rN);
 
-    t_DirectFilter dnum((double *)def_allps_num, (double *)0, sizeof(def_allps_num)/sizeof(double));
-    t_DirectFilter dden((double *)def_decim_num, (double *)0, sizeof(def_decim_num)/sizeof(double), 2);
+    rN = set.ask("__def_decim_num").db("num", coe, N);
+    t_DirectFilter dden(coe, (double *)0, rN, 2);
+
     bank = new t_DiadicFilterBank(dnum, dden, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
 
     for(int i=0; i<RT_MAX_BANDS_PER_OCTAVE;  i++) bank[i] = 0;
@@ -284,8 +222,8 @@ t_rt_shift::t_rt_shift(QObject *parent):
 //---------------------------------------------------------------------------
 void t_rt_shift::process(){
 
-    int D = set["Bands"].get().toInt();  //pocet pasem na oktavu
-    QList<QVariant> selected = set["Select"].getm();  //vyber co jde ven
+    int D = set.ask("Bands").get().toInt();  //pocet pasem na oktavu
+    QJsonArray selected = set.ask("Select").get().toArray();  //vyber co jde ven
     uint mask = 0; for(int d=0; d<D; d++) if(selected.contains(d)) mask |= (1 << d);
 
     t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
@@ -340,8 +278,8 @@ void t_rt_shift::process(){
 //------------------------------------------------------------------------
 void t_rt_shift::change(){
 
-    int D = set.get["Bands"].get().toInt();  //pocet pasem / decimacni faktor
-    int N = set.get["Multibuffer"].get().toInt();  //pocet bodu v radku
+    int D = set.ask("Bands").get().toInt();  //pocet pasem / decimacni faktor
+    int N = set.ask("Multibuffer").get().toInt();  //pocet bodu v radku
     t_rt_status::t_rt_a_sta pre_sta = sta.state;
 
     /*! \todo - jak nastavit jen limit a ponechat vyber? */
@@ -350,7 +288,7 @@ void t_rt_shift::change(){
     pause();
 
     sta.fs_out = sta.fs_in / D;  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    t_slcircbuf::resize(setget("Slices").toInt()); //novy vnitrni multibuffer
+    t_slcircbuf::resize(set.ask("Slices").get().toInt()); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
     /*! \todo - vymyslet ja vyuzit frekvenci osu */
