@@ -20,7 +20,21 @@ t_rt_base::t_rt_base(QObject *parent, QDir &config) :
         rd_i = pre->attach(this);    //nastavi sta.fs_in a rd_I
     }
 
+    /*! default config */
     QFile f_res(config);
+    if(f_res.open(QIODevice::ReadOnly | QIODevice::Text)){
+
+        QByteArray f_data = f_res.read(64000);
+        QJsonDocument js_doc = QJsonDocument::fromJson(f_data);
+        if(!js_doc.isEmpty()){
+
+            set = js_doc.object();
+        }
+    }
+
+
+    /*! user config over default */
+    QFile f_res(objectName());
     if(f_res.open(QIODevice::ReadOnly | QIODevice::Text)){
 
         QByteArray f_data = f_res.read(64000);

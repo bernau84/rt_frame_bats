@@ -17,14 +17,13 @@ Konfigurace
 - merge user a default jcon konfigurace (asi jen pokud existuje v user tak se tim prepise)
 - jak resit konfiguraci zapojeni prvku? (ale a project file?)
 - jak pojmenovavat jednitlive souboru k jednotlivym prvkum
-- predeat import/export aby ignoroval info polozky
+- nemam uplne elegantne podchycenou zmenu parametru za behu - set ma jen jednu metodu pro zmenu a to je update
 
-?! inheritance operatoru? asi ano ale co to jako dela? =
 
 NOTES
 
 * preprocess vyhodime, vyuzijem usus ze na jakykoli prvek muzem napojit jakykoli dalsi - rozhranni je identicke
-
+?! inheritance operatoru? asi ano ale co to jako dela?
 ? vicevstupy nod?
 
 

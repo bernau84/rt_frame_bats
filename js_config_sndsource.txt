@@ -24,6 +24,12 @@
             {"__min": 0.001},
         ]
     },
+    {"Rates": [
+            {"__info": "avaiable sampling frequencies"},
+            {"8000 Hz": 8000},
+            {"__def": 8000}
+        ]
+    },
     {"__refresh_rate": [
             {"__info": "inner rate of refresh multibuffer per time resolution"},
             {"1x": 1.0},

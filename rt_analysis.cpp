@@ -5,6 +5,7 @@
 t_rt_analysis::t_rt_analysis(QObject *parent):
     t_rt_base(parent)
 {
+
 }
 
 //---------------------------------------------------------------------------
@@ -25,10 +26,10 @@ t_rt_cpb::t_rt_cpb(QObject *parent, QDir &config):
     int rN, N = 1024;
     double coe[N];
 
-    rN = set.ask("__def_allps_num").db("num", coe, N);
+    rN = set.ask("__def_allps_num")->db("num", coe, N);
     t_DirectFilter dnum(coe, (double *)0, rN);
 
-    rN = set.ask("__def_decim_num").db("num", coe, N);
+    rN = set.ask("__def_decim_num")->db("num", coe, N);
     t_DirectFilter dden(coe, (double *)0, rN, 2);
 
     bank = new t_DiadicFilterBank(dnum, dden, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
@@ -59,8 +60,8 @@ t_rt_cpb::~t_rt_cpb(){
 //---------------------------------------------------------------------------
 void t_rt_cpb::process(){
 
-    int N = set.ask("Octaves").get().toInt();  //aktualni pocet oktav
-    int M = set.ask("Bands").get().toInt();  //pocet pasem na oktavu
+    int N = set.ask("Octaves")->get().toInt();  //aktualni pocet oktav
+    int M = set.ask("Bands")->get().toInt();  //pocet pasem na oktavu
 
     t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
     if(!pre) return; //navazujem na zdroj dat?
@@ -119,14 +120,14 @@ void t_rt_cpb::process(){
 //------------------------------------------------------------------------
 void t_rt_cpb::change(){
 
-    int N = set.ask("Octaves").get().toInt();  //aktualni pocet oktav
-    int M = set.ask("Bands").get().toInt();  //pocet pasem na oktavu
+    int N = set.ask("Octaves")->get().toInt();  //aktualni pocet oktav
+    int M = set.ask("Bands")->get().toInt();  //pocet pasem na oktavu
     t_rt_status::t_rt_a_sta pre_sta = sta.state;
 
     pause();
 
-    sta.fs_out = 1 / set.ask("Time").get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    t_slcircbuf::resize(set.ask("Slices").get().toInt()); //novy vnitrni multibuffer
+    sta.fs_out = 1 / set.ask("Time")->get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
+    t_slcircbuf::resize(set.ask("Slices")->get().toInt()); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
     t_rt_slice dfs;
@@ -206,10 +207,10 @@ t_rt_shift::t_rt_shift(QObject *parent):
     int rn, N = 1024;
     double coe[N];
 
-    rN = set.ask("__def_allps_num").db("num", coe, N);
+    rN = set.ask("__def_allps_num")->db("num", coe, N);
     t_DirectFilter dnum(coe, (double *)0, rN);
 
-    rN = set.ask("__def_decim_num").db("num", coe, N);
+    rN = set.ask("__def_decim_num")->db("num", coe, N);
     t_DirectFilter dden(coe, (double *)0, rN, 2);
 
     bank = new t_DiadicFilterBank(dnum, dden, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
@@ -222,8 +223,8 @@ t_rt_shift::t_rt_shift(QObject *parent):
 //---------------------------------------------------------------------------
 void t_rt_shift::process(){
 
-    int D = set.ask("Bands").get().toInt();  //pocet pasem na oktavu
-    QJsonArray selected = set.ask("Select").get().toArray();  //vyber co jde ven
+    int D = set.ask("Bands")->get().toInt();  //pocet pasem na oktavu
+    QJsonArray selected = set.ask("Select")->get().toArray();  //vyber co jde ven
     uint mask = 0; for(int d=0; d<D; d++) if(selected.contains(d)) mask |= (1 << d);
 
     t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
@@ -278,17 +279,17 @@ void t_rt_shift::process(){
 //------------------------------------------------------------------------
 void t_rt_shift::change(){
 
-    int D = set.ask("Bands").get().toInt();  //pocet pasem / decimacni faktor
-    int N = set.ask("Multibuffer").get().toInt();  //pocet bodu v radku
+    int D = set.ask("Bands")->get().toInt();  //pocet pasem / decimacni faktor
+    int N = set.ask("Multibuffer")->get().toInt();  //pocet bodu v radku
     t_rt_status::t_rt_a_sta pre_sta = sta.state;
 
     /*! \todo - jak nastavit jen limit a ponechat vyber? */
-    //set["Select"].set("max", D); - nenastavuje limit ale i hodnotu
+    //set["Select"]->set("max", D); - nenastavuje limit ale i hodnotu
 
     pause();
 
     sta.fs_out = sta.fs_in / D;  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    t_slcircbuf::resize(set.ask("Slices").get().toInt()); //novy vnitrni multibuffer
+    t_slcircbuf::resize(set->ask("Slices").get().toInt()); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
     /*! \todo - vymyslet ja vyuzit frekvenci osu */

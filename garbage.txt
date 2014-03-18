@@ -1,0 +1,52 @@
+    /*! \brief update attribute from user
+    */
+    void update(QString &title, const t_setup_entry &attribute){
+
+        QJsonObject::iterator ai = find(title);
+        if(ai == end())
+            return;
+
+        /*! update only that keys which are already present */
+        int ret = 0;
+        QStringList kl = attributes.keys();
+        for(QStringList::const_iterator ki = kl.constBegin(); ki != kl.constEnd(); ki++){
+            QJsonObject::iterator oki = find(ki);
+            if(oki == end())
+                continue;
+            *ai[oki] = attributes[ki];
+            ret += 1;
+        }
+
+    }
+
+
+
+    template<T> QJsonArray vlist(const T *v, int n){
+
+        QJsonArray t;
+        for(int i=0; (i<n) && (v); i++) t << *v++;
+        return t;
+    }
+
+//    QList<QAudioDeviceInfo> infos = QAudioDeviceInfo::avaiableDevices();
+//    QAudioDeviceInfo infodef =  QAudioDeviceInfo::defaultInputDevice();
+//    QList<QAudioFormat::Endian> def_bord = in.supportedByteOrders();
+//    QList<int> 	def_ch = in.supportedChannels();
+//    QStringList def_codecs = in.supportedCodecs();
+//    QList<QAudioFormat::SampleType> def_types = in.supportedSampleTypes();
+
+    t_setup_entry fr_e();
+    QList<int> fr_l = in.supportedFrequencies();
+    for(QList<int>::iterator i=fr_l.begin(); i!=fr_l.end(); i++)
+        switch(*i){
+            case fr_l.first():  fr_e.set(fr_l[i], QString::number(fr_l[i])+"Hz", t_setup_entry::MIN);
+            case fr_l.last():   fr_e.set(fr_l[i], QString::number(fr_l[i])+"Hz", t_setup_entry::MAX);
+            default: fr_e.set(fr_l[i], QString::number(fr_l[i])+"Hz");
+        }
+
+
+    /*! \brief read multivalue */
+    QJsonArray getm(QString title = QString("__val")){
+
+        return get(title).toArray();
+    }

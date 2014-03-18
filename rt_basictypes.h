@@ -21,11 +21,12 @@ private:
 
         switch(f){
 
+            case VAL: insert("__val", val); break;
             case DEF: insert("__def", val); break;
             case MIN: insert("__min", val); break;
             case MAX: insert("__max", val); break;
-            case INFO: insert("__info", val); return;
-        };
+            case INFO: insert("__info", val); break;
+        }
     }
 
     void init(const QStringList &name, const QJsonArray &val){
@@ -40,51 +41,24 @@ public:
     /*! \brief read actual number */
     QJsonValue get(QString name = QString("__val")){
 
-        return value(name, value("__def"));
+        if(constFind(name) == constEnd())
+            return value("__def");
+        else
+            return value(name);
     }
 
-    /*! \brief read actual number */
-    QJsonValue get(t_restype t = VAL){
+    /*! \brief read reserved value */
+    QJsonValue get(t_restype t){
 
         switch(f){
 
-            case MIN: get("__min"); return;
-            case MAX: get("__max"); return;
-            case INFO: get("__info"); return;
-            case INFO: get("__val"); return;
+            case MIN: return value("__min");
+            case MAX: return value("__max");
+            case INFO: return value("__info");
+            case DEF: return value("__def");
         }
 
-        return get("__def");
-    }
-
-    /*! \brief read multivalue */
-    QJsonArray getm(QString title = QString("val")){
-
-        return get(title).toArray();
-    }
-
-    /*! \brief set arbitrary value between boundaries
-     * assumes vales can be converted to double for
-     * min max comparison
-     */
-    QJsonValue set(const QJsonValue &val){
-
-        QJsonObject::const_iterator i_max = find("__max");
-        QJsonObject::const_iterator i_min = find("__min");
-        QJsonObject::Type t = val.type();
-
-        if(val.isDouble()){
-
-            if((i_max != constEnd()) && (i_max->isDouble()))
-                if(val.toDouble() > i_max->toDouble())
-                    return insert("__val", i_max->value())->value();
-
-            if((i_min != constEnd()) && (i_min->isDouble()))
-                if(val.toDouble() < i_min->toDouble())
-                    return insert("__val", i_min->value())->value();
-        }
-
-        return insert("__val", val)->value();
+        return get(); //VAL is assumed
     }
 
     /*! \brief convert attribute value to double array
@@ -104,26 +78,81 @@ public:
         return n;
     }
 
+    /*! \brief set new value
+     * support arbitrary value between boundaries (for doubles) with hard limitation,
+     * free value, select from menu
+     */
+    QJsonValue set(const QJsonValue &val){
+
+        QJsonObject::const_iterator i_max = constFind("__max");
+        QJsonObject::const_iterator i_min = constFind("__min");
+        QJsonObject::const_iterator i_def = constFind("__def");
+        QJsonObject::Type t = val.type();
+
+        if(val.isDouble()){
+
+            /*! out of high bound */
+            if((i_max != constEnd()) && (i_max->isDouble()))
+                if(val.toDouble() > i_max->toDouble())
+                    return insert("__val", i_max->value())->value();
+
+            /*! out of low bound */
+            if((i_min != constEnd()) && (i_min->isDouble()))
+                if(val.toDouble() < i_min->toDouble())
+                    return insert("__val", i_min->value())->value();
+
+            /*! in bound */
+            if((i_max != constEnd()) || (i_min != constEnd()))
+                return insert("__val", val)->value();
+        }
+
+        /*! free value (defined only with default) */
+        if((count() <= 2) && (i_def != constEnd()))
+            return insert("__val", val)->value();
+
+        /*! else enum value is assumed */
+        for(QJsonObject::const_iterator i = constBegin(); i != constEnd(); i++)
+            if(i->value() == val)
+                return insert("__val", val)->value();
+
+        /*! value outside emun - no change possible - return actual value */
+        return get();
+    }
 
     /*! \brief add new predefined value and select it*/
-    QJsonValue set(const QString &name, const QJsonValue &val, restype t = UNDEF){
+    QJsonValue set(const QString &name, const QJsonValue &val, t_restype t = UNDEF){
 
-        if(UNDEF != t) init(name, val, t);
-            else init(name, val);
-
+        insert(name, val);
+        if(UNDEF != t) init(t, val);
         return sel(name);
     }
 
-    /*! \brief from enum menu or min, max, def, val keywords */
+    /*! \brief sel from predefined - set default if name doesnt exist */
     QJsonValue sel(const QString &name){
 
-        return insert("__val", value(name)).value();
+        return insert("__val", get(name))->value();
     }
 
-    /*! \brief seznam dovolenych prvku - idef je index defaultniho (pokud <0 pak zadny neni),
-     *  autob jsou automaticke meze (min je prvni, max poslednim porvkem)
+    /*! \brief sel from reserved - min, max, def */
+    QJsonValue sel(t_restype t){
+
+        return insert("__val", get(t))->value();
+    }
+
+    /*! \brief init from lists
      */
     t_setup_entry(const QJsonArray &val, const QStringList &name){
+
+        init(name, val);
+    }
+
+    /*! \brief init from array
+     */
+    t_setup_entry(const QJsonArray &val, const QString &unit = ""){
+
+        QStringList name;
+        foreach(QJsonValue i, val)
+            name.append(i.toString() + unit);
 
         init(name, val);
     }
@@ -143,8 +172,11 @@ public:
     }
 };
 
+/*! list of JSonObject as attrbutes presendet outside as t_setup_enty item
+ * list of object is hidden as private, read must be done via ask,
+ * write via udate */
 
-class t_collection_entry : public QObject, QJsonObject {
+class t_collection_entry : private QObject, QJsonObject {
 
     Q_OBJECT
 signals:
@@ -154,43 +186,35 @@ public:
 
     /*! helpers */
     QJsonArray vlist(){  QJsonArray t; return t; }
-
     QStringList slist(){  QStringList t; return t; }
-    
-    template<T> QJsonArray vlist(const T *v, int n){
+    QStringList slist(QVariantList v, QString unit = ""){
 
-        QJsonArray t;
-        for(int i=0; (i<n) && (v); i++) t << *v++;
+        QStringList t;
+        for(int i=0; i < v.count(); i++) t << v[i].toString() + unit;
         return t;
     }
 
-    /*! \brief update from user
-     *  \return number of succesfuly updated attributes (only that which was already contained)
-     * inserting is not supported
+    /*! \brief insert or replace attribute from user
     */
-    int update(t_setup_entry &attributes){
+    void insert(QString &title, const t_setup_entry &attribute){
 
-        int ret = 0;
-        QStringList kl = attributes.keys();
-        for(QStringList::const_iterator ki = kl.constBegin(); ki != kl.constEnd(); ki++){
+        QJsonObject::iterator ai = find(title);
+        if(ai == end())
+            return;
 
-            QJsonObject::iterator oi = find(ki);
-            if(oi == end())
-                continue;
-
-            *io = attributes[ki];
-            ret += 1;
-        }
-
-        return ret;
+        /*! update all keys version */
+        *ai = attribute;
     }
 
     /*! \brief acces attribute
     */
-    const t_setup_entry ask(const QString &title){
+    const t_setup_entry *ask(const QString &title){
 
-        t_setup_entry v(value[attribute]);
-        return v;
+        QJsonObject::iterator ai = find(title);
+        if(ai == end())
+            return t_setup_entry();
+
+        return t_setup_entry(*ai);
     }
 
     /*! \brief create & inicialize

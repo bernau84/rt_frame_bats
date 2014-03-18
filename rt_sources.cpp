@@ -12,23 +12,21 @@ t_rt_sources::t_rt_sources(QObject *parent):
 t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
     t_rt_sources(parent), input_dev(in)
 {
+    t_setup_entry efr;
+    QList<int> sfr = in.supportedFrequencies();
+    foreach(int f, sfr){
 
-//    QList<QAudioDeviceInfo> infos = QAudioDeviceInfo::avaiableDevices();
-//    QAudioDeviceInfo infodef =  QAudioDeviceInfo::defaultInputDevice();
-//    QList<QAudioFormat::Endian> def_bord = in.supportedByteOrders();
-//    QList<int> 	def_ch = in.supportedChannels();
-//    QStringList def_codecs = in.supportedCodecs();
-//    QList<QAudioFormat::SampleType> def_types = in.supportedSampleTypes();
+        efr.set(f, )
+    }
 
-    set.insert("Rates", t_setup_entry(in.supportedFrequencies(), "Hz", true));
-    set.insert("Points", t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", 3, true));
-    set.insert("Refresh", t_setup_entry(set.vlist()<< 10 << 20 << 50 << 100 << 200 << 500, "ms", 3, true));
-    set.insert("Multibuffer", t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", true));  //pocet radku historie
+    t_setup_entry fr(in.supportedFrequencies().toJson().toArray(), "Hz");
 
-    /*! @todo - sem vrazit pripadne nejake prevzorkovani; prumerovani*/
+    int fr_a = fr.ask("Rates")->get().toInt();  //from default
+    fr.set(fr_a);
+    set.insert("Rates", fr);
 
     //zvolime defaultni vzorkovacku
-    sta.fs_out = sta.fs_in = set["Rates"].sel(8000); //nastavime 8Khz - tedy pokud tam jsou, jinak zustava 1. hodnota
+    sta.fs_out = sta.fs_in = set.ask("Rates")->sel(MIN); //nastavime 8Khz - tedy pokud tam jsou, jinak zustava 1. hodnota
 
     input_io = 0;
     input_audio = 0;
