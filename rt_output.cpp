@@ -18,15 +18,15 @@ t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
 //    QStringList def_codecs = in.supportedCodecs();
 //    QList<QAudioFormat::SampleType> def_types = in.supportedSampleTypes();
 
-    set.insert("Rates", t_setup_entry(out.supportedFrequencies(), "Hz", true));
-    set.insert("Points", t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", 3, true));
-    set.insert("Refresh", t_setup_entry(set.vlist() << 10 << 20 << 50 << 100 << 200 << 500, "ms", 3, true));
-    set.insert("Multibuffer", t_setup_entry(set.vlist() << 10 << 20 << 30 << 40 << 50 << 70 << 100, "", 0, true));
-
     /*! @todo - sem vrazit pripadne nejake prevzorkovani pokud je vstupni frekvence jina nez prehravaci*/
 
+    t_setup_entry fr(out.supportedFrequencies().toJson().toArray(), "Hz");  //recent list
+    int fr_a = set.ask("Rates")->get().toInt();  //actual frequency
+    set.insert("Rates", fr);  //update list
+    fr.set(fr_a); //select original frequnecy of default if doesnt exist
+
     //zvolime defaultni vzorkovacku
-    sta.fs_out = sta.fs_in = set["Rates"].set(8000); //nastavime 8Khz - tedy pokud tam jsou, jinak zustava 1. hodnota
+    sta.fs_out = sta.fs_in = set["Rates"].get(); //nastavime 8Khz - tedy pokud tam jsou, jinak zustava 1. hodnota
 
     output_io = 0;
     output_audio = 0;

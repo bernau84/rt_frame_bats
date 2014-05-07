@@ -12,21 +12,13 @@ t_rt_sources::t_rt_sources(QObject *parent):
 t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
     t_rt_sources(parent), input_dev(in)
 {
-    t_setup_entry efr;
-    QList<int> sfr = in.supportedFrequencies();
-    foreach(int f, sfr){
-
-        efr.set(f, )
-    }
-
-    t_setup_entry fr(in.supportedFrequencies().toJson().toArray(), "Hz");
-
-    int fr_a = fr.ask("Rates")->get().toInt();  //from default
-    fr.set(fr_a);
-    set.insert("Rates", fr);
+    t_setup_entry fr(in.supportedFrequencies().toJson().toArray(), "Hz");  //recent list
+    int fr_a = set.ask("Rates")->get().toInt();  //actual frequency
+    set.insert("Rates", fr);  //update list
+    fr.set(fr_a); //select original frequnecy of default if doesnt exist
 
     //zvolime defaultni vzorkovacku
-    sta.fs_out = sta.fs_in = set.ask("Rates")->sel(MIN); //nastavime 8Khz - tedy pokud tam jsou, jinak zustava 1. hodnota
+    sta.fs_out = sta.fs_in = set.ask("Rates")->get(); //vyctem
 
     input_io = 0;
     input_audio = 0;
