@@ -7,7 +7,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
-class t_collection_entry;
+class t_collection;
 
 /*! hodonoty nastaveni
  * podporuje klice / menu / min / max / default / multiselect
@@ -69,12 +69,13 @@ public:
      */
     int db(const QString &name, double *v, int N){
 
-        QJsonValue ar = value(name);
+        QJsonValue tv = value(name);
 
-        if(!v || !N || !ar.isArray())
+        if(!v || !N || !tv.isArray())
             return 0;
 
         int n = 0;
+        QJsonArray ar = tv.toArray();
         foreach(QJsonValue vv, ar)
             if((vv.isDouble()) && (++n < N))
                 *v++ = vv.toDouble();
@@ -91,7 +92,6 @@ public:
         QJsonObject::const_iterator i_max = constFind("__max");
         QJsonObject::const_iterator i_min = constFind("__min");
         QJsonObject::const_iterator i_def = constFind("__def");
-        QJsonValue::Type t = val.type();
 
         if(val.isDouble()){
 
@@ -127,6 +127,7 @@ public:
     QJsonValue set(const QString &name, const QJsonValue &val, t_restype t = DEF){
 
         QJsonObject::insert(name, val);
+        insert(t, val);
         return sel(name);
     }
 
@@ -179,7 +180,7 @@ public:
  * list of object is hidden as private, read must be done via ask,
  * write via udate */
 
-class t_collection_entry : private QObject, QJsonObject {
+class t_collection : private QObject, QJsonObject {
 
     Q_OBJECT
 signals:
@@ -211,18 +212,37 @@ public:
 
     /*! \brief access/test attribute
     */
-    const t_setup_entry *ask(const QString &title){
+    bool ask(const QString &title, t_setup_entry *e = NULL){
 
         QJsonObject::iterator ai = find(title);
-        if(ai == end())
-            return &(ai.value());
+        if(ai == end()){
 
-        return NULL;
+            if(e) *e = t_setup_entry(ai.value().toObject());
+            return true;
+        }
+
+        return false;
+    }
+
+    /*! \brief overload operator to access full t_setup_entry (not only QObject)
+    */
+    t_setup_entry operator[](const QString &title){
+
+        t_setup_entry t;
+        this->ask(title, &t);
+        return t;
     }
 
     /*! \brief create & inicialize
      */
-    explicit t_collection_entry(QObject *parent = 0, QJsonObject &def = QJsonObject()):
+    explicit t_collection(QObject *parent = 0):
+        QObject(parent), QJsonObject(){
+
+    }
+
+    /*! \brief create & inicialize
+     */
+    explicit t_collection(QObject *parent,  QJsonObject &def):
         QObject(parent), QJsonObject(def){
 
     }

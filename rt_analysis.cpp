@@ -20,19 +20,16 @@ void t_rt_analysis::pause(){
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
-t_rt_cpb::t_rt_cpb(QObject *parent, QDir &config):
-    t_rt_analysis(parent, config)
+t_rt_cpb::t_rt_cpb(QObject *parent):
+    t_rt_analysis(parent, QDir(":/config/js_config_cpbanalysis.txt"))
 {
-    int rN, N = 1024;
-    double coe[N];
+    double decif[1024], passf[1] = 1.0;
 
-    rN = set.ask("__def_allps_num")->db("num", coe, N);
-    t_DirectFilter dnum(coe, (double *)0, rN);
+    int rN = set["__oct_deci_directfir"].db("num", decif, sizeof(decif)/sizeof(decif[0]));
+    t_DirectFilter deci(decif, (double *)0, rN, 2);
+    t_DirectFilter pass(passf, (double *)0, 1);
 
-    rN = set.ask("__def_decim_num")->db("num", coe, N);
-    t_DirectFilter dden(coe, (double *)0, rN, 2);
-
-    bank = new t_DiadicFilterBank(dnum, dden, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
+    bank = new t_DiadicFilterBank(pass, deci, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
 
     for(int i=0; i<RT_MAX_OCTAVES_NUMBER;                            i++) dline[i] = 0; //vynulujem
     for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE;  i++) aline[i] = 0;
@@ -60,8 +57,8 @@ t_rt_cpb::~t_rt_cpb(){
 //---------------------------------------------------------------------------
 void t_rt_cpb::process(){
 
-    int N = set.ask("Octaves")->get().toInt();  //aktualni pocet oktav
-    int M = set.ask("Bands")->get().toInt();  //pocet pasem na oktavu
+    int N = set["Octaves"].get().toDouble();  //aktualni pocet oktav
+    int M = set["Bands"].get().toDouble();  //pocet pasem na oktavu
 
     t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
     if(!pre) return; //navazujem na zdroj dat?
@@ -120,14 +117,14 @@ void t_rt_cpb::process(){
 //------------------------------------------------------------------------
 void t_rt_cpb::change(){
 
-    int N = set.ask("Octaves")->get().toInt();  //aktualni pocet oktav
-    int M = set.ask("Bands")->get().toInt();  //pocet pasem na oktavu
+    int N = set["Octaves"].get().toDouble();  //aktualni pocet oktav
+    int M = set["Bands"].get().toDouble();  //pocet pasem na oktavu
     t_rt_status::t_rt_a_sta pre_sta = sta.state;
 
     pause();
 
-    sta.fs_out = 1 / set.ask("Time")->get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    t_slcircbuf::resize(set.ask("Slices")->get().toInt()); //novy vnitrni multibuffer
+    sta.fs_out = 1 / set["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
+    t_slcircbuf::resize(set["Slices"].get().toDouble()); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
     t_rt_slice dfs;
@@ -163,23 +160,18 @@ void t_rt_cpb::change(){
         for(unsigned int j=0; j<M; j++)
             aver[i*M + j] = (t_pFilter *) new t_CanonFilter(avr_num, avr_den, 2);
 
-        switch(M){
+        int rn = 0;
+        double num[256], den[256];
+        char pcpb[64], pnum[16], pden[16];
 
-            case(1):
-                aline[i] = (t_pFilter *) new t_BiQuadFilter((double *)def_01cpb_num, (double *)def_01cpb_den, 6);
-            break;
-            case(3):
-                for(unsigned int j=0; j<M; j++)
-                    aline[i*M + j] = (t_pFilter *) new t_BiQuadFilter((double *)&def_03cpb_num[j][0], (double *)&def_03cpb_den[j][0], 3);
-            break;
-            case(12):
-                for(unsigned int j=0; j<M; j++)
-                    aline[i*M + j] = (t_pFilter *) new t_BiQuadFilter((double *)&def_12cpb_num[j][0], (double *)&def_12cpb_den[j][0], 2);
-            break;
-            case(24):
-                for(unsigned int j=0; j<M; j++)
-                    aline[i*M + j] = (t_pFilter *) new t_BiQuadFilter((double *)&def_24cpb_num[j][0], (double *)&def_24cpb_den[j][0], 1);
-            break;
+        snprintf(pcpb, sizeof(pcpb), "__%d_cpb_biquadiir", M);
+        for(unsigned int j=0; j<M; j++){
+
+            snprintf(pnum, sizeof(pnum), "num%d", j);
+            snprintf(pden, sizeof(pden), "den%d", j);
+            rn = set[pcpb].db(pnum, num, sizeof(num)/sizeof(num[0]));
+            rn = set[pcpb].db(pden, den, sizeof(den)/sizeof(den[0]));
+            aline[i*M + j] = (t_pFilter *) new t_BiQuadFilter(num, den, rn/3);
         }
     }
 
@@ -202,29 +194,16 @@ void t_rt_cpb::change(){
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 t_rt_shift::t_rt_shift(QObject *parent):
-    t_rt_analysis(parent)
+    t_rt_analysis(parent, QDir(":/config/js_config_freqshift.txt"))
 {
-    int rn, N = 1024;
-    double coe[N];
-
-    rN = set.ask("__def_allps_num")->db("num", coe, N);
-    t_DirectFilter dnum(coe, (double *)0, rN);
-
-    rN = set.ask("__def_decim_num")->db("num", coe, N);
-    t_DirectFilter dden(coe, (double *)0, rN, 2);
-
-    bank = new t_DiadicFilterBank(dnum, dden, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
-
-    for(int i=0; i<RT_MAX_BANDS_PER_OCTAVE;  i++) bank[i] = 0;
-
     change(); //doinicializuje analyticke pasmove filtry a delay line
 }
 
 //---------------------------------------------------------------------------
 void t_rt_shift::process(){
 
-    int D = set.ask("Bands")->get().toInt();  //pocet pasem na oktavu
-    QJsonArray selected = set.ask("Select")->get().toArray();  //vyber co jde ven
+    int D = set["Bands"].get().toDouble();  //pocet pasem na oktavu
+    QJsonArray selected = set["Select"].get().toArray();  //vyber co jde ven
     uint mask = 0; for(int d=0; d<D; d++) if(selected.contains(d)) mask |= (1 << d);
 
     t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
@@ -279,8 +258,8 @@ void t_rt_shift::process(){
 //------------------------------------------------------------------------
 void t_rt_shift::change(){
 
-    int D = set.ask("Bands")->get().toInt();  //pocet pasem / decimacni faktor
-    int N = set.ask("Multibuffer")->get().toInt();  //pocet bodu v radku
+    int D = set["Bands"].get().toDouble();  //pocet pasem / decimacni faktor
+    int N = set["Multibuffer"].get().toDouble();  //pocet bodu v radku
     t_rt_status::t_rt_a_sta pre_sta = sta.state;
 
     /*! \todo - jak nastavit jen limit a ponechat vyber? */
@@ -288,8 +267,8 @@ void t_rt_shift::change(){
 
     pause();
 
-    sta.fs_out = sta.fs_in / D;  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    t_slcircbuf::resize(set->ask("Slices").get().toInt()); //novy vnitrni multibuffer
+    sta.fs_out = *sta.fs_in / D;  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
+    t_slcircbuf::resize(set["Slices"].get().toDouble()); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
     /*! \todo - vymyslet ja vyuzit frekvenci osu */
@@ -305,10 +284,15 @@ void t_rt_shift::change(){
     for(int i=0; i<RT_MAX_BANDS_PER_OCTAVE; bank[i++] = 0)
         if(bank[i]) delete bank[i];
 
-    //napocitame jen takove zpozdeni ktere je nezbytne
+    double coe[1024], sh_coe[1024];
+    char scoe[16]; snprintf(scoe, sizeof(scoe), "num%d", D);
+    int rn = set["__bandpass_directfir"].db(scoe, coe, N);  //baseband
+
+    //bandpass bank
     for(int i=0; i<D; i++){
 
-        bank[i] = (t_pFilter *) new t_DirectFilter(coef_bp[N], NULL, D);
+        for(int j= 0; j<rn; j++) sh_coe[j] = coe[j] * cos((2*PI*j) * (1.0*i/D));  //freq. shift
+        bank[i] = (t_pFilter *) new t_DirectFilter(sh_coe, NULL, rn, D);
         for(int j=0; j<(D-i); j++) bank[i]->Process(0.0, NULL);  //finta - inicizizace vnitrniho buferu nulami
                 //kazdy filtr je inicializaovan jinak takze kazdy se v ramci decimace pocita
                 //s ruznym vzorkem - zajistuje harmonizaci rychlosti vypoctu

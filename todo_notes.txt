@@ -12,19 +12,20 @@ Napojeni plotu
 
 Konfigurace
 - defaultni kjonfig soucasti resourcu (zdrojaku) at to nestrasi v kodu
-- json vsude
-- nemame vyresene jak se bude rozlisovat mezi enumem a prvek s dovnou konf - asi tak ze tam bude to min a max!
+- json vsude + rozlisujem extra honoty jako min, max, act, def a info
 - merge user a default jcon konfigurace (asi jen pokud existuje v user tak se tim prepise)
-- jak resit konfiguraci zapojeni prvku? (ale a project file?)
-- jak pojmenovavat jednitlive souboru k jednotlivym prvkum
-- nemam uplne elegantne podchycenou zmenu parametru za behu - set ma jen jednu metodu pro zmenu a to je update
-
-
+! neni problem import a export pres QJsonDocument ale neni jasne jestli rozhrannim bude soubor nebo nejaky protokol...proto nechavame byt
+? jak resit konfiguraci zapojeni prvku? (ale a project file?)
+x jak pojmenovavat jednotlive souboru k jednotlivym prvkum - nechavame na vyssich vrstvach, hlavne nezadny defaultni nazvoslovi (to postatne mame v resourcech)
+- zmena parametru za behu je mozna primo do kolekce ktera je public, nasledne pustit metodu change() pokud je to nutne ktery vyvola reset prvku (stop & change & state restore)
+        a odpali reakci k podrizenym prvkum
 NOTES
 
 * preprocess vyhodime, vyuzijem usus ze na jakykoli prvek muzem napojit jakykoli dalsi - rozhranni je identicke
 ?! inheritance operatoru? asi ano ale co to jako dela?
 ? vicevstupy nod?
+! uzivatelska nastaveni odehravat pres preddka t_collection (nomalne import a export pres QJsonDocument!)
 
 
-
+!!chyba jako brno - koeficienty filtru musi byt umisteny globalne mam ten dojem
+!!musim je nakopat na heap nebo do lok. poli jednotlivych trid...grr

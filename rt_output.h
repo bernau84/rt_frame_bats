@@ -31,7 +31,7 @@ class t_rt_output : public t_rt_base
 {
     Q_OBJECT
 public:
-    t_collection_entry set;
+    t_collection set;
     t_rt_output(QObject *parent = 0);
 };
 

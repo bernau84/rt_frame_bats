@@ -10,7 +10,7 @@ class t_rt_sources : public t_rt_base //, public QThread
 {
     Q_OBJECT
 public:
-    t_collection_entry set;
+    t_collection set;
     t_rt_sources(QObject *parent = 0);
 };
 

@@ -33,11 +33,11 @@ FORMS    += mainwindow.ui
 
 OTHER_FILES += \
     todo_notes.txt \
-    js_config_cpbanalysis.txt \
-    js_config_freqshift.txt \
     js_config_sndsource.txt \
     js_config_sndsink.txt \
-    garbage.txt
+    garbage.txt \
+    js_config_cpbanalysis.txt \
+    js_config_freqshift.txt
 
 RESOURCES += \
     rt_res_defaults.qrc

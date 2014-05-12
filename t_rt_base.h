@@ -49,19 +49,19 @@ protected:
     int rd_n;   //pocet registrovanych prvku pro cteni
     int rd_i;   //cteci index v multibufferu predcoziho prvku
 
-    double  nn_tot; //pocet zpracovanych vzorku
+    long long int nn_tot; //pocet zpracovanych vzorku
     double  tm_tot; //celkova dobe behu funkce process (v sec)
 
 public:
-    t_collection_entry set;
+    t_collection set;
     t_rt_status sta;
-    explicit t_rt_base(QObject *parent = 0, QDir &config);
 
+    explicit t_rt_base(QObject *parent = 0, const QDir &resource = QDir());
     int attach(t_rt_base *next);  //vraci index pod kterym muze pristupovat do multibufferu
 
 signals:
-    void on_update();
-    void on_change();
+    void on_update();   //zmena zvnejsu - signal vede na slot change
+    void on_change();  //propagace zmeny zevnitr k navazanym prvkum
 
 public slots:
     void start();
