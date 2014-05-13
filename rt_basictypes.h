@@ -193,16 +193,6 @@ signals:
 
 public:
 
-    /*! helpers */
-    QJsonArray vlist(){  QJsonArray t; return t; }
-    QStringList slist(){  QStringList t; return t; }
-    QStringList slist(QVariantList v, QString unit = ""){
-
-        QStringList t;
-        for(int i=0; i < v.count(); i++) t << v[i].toString() + unit;
-        return t;
-    }
-
     /*! \brief replace attribute from user
     */
     void replace(const QString &title, const t_setup_entry &attribute){
@@ -238,14 +228,14 @@ public:
         return t;
     }
 
-    /*! \brief create & inicialize
+    /*! \brief create empty one
      */
     explicit t_collection(QObject *parent = 0):
         QObject(parent), QJsonObject(){
 
     }
 
-    /*! \brief create & inicialize
+    /*! \brief create inicialized
      */
     explicit t_collection(const QJsonObject &def):
         QObject(0), QJsonObject(def){

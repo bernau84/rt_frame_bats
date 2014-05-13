@@ -24,7 +24,7 @@
     },
     "Rates": {
         "__info": "avaiable sampling frequencies",
-        "8000 Hz": 8000,
+        "8kHz": 8000,
         "__def": 8000
     },
     "__refresh_rate": {

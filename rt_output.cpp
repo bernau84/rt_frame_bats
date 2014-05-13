@@ -1,32 +1,20 @@
 #include "rt_output.h"
 
-t_rt_output::t_rt_output(QObject *parent) :
-    QObject(parent)
+t_rt_output::t_rt_output(QObject *parent, const QDir &resource) :
+    t_rt_base(parent, resource)
 {
 }
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
-t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
-    t_rt_sources(parent), output_dev(out)
+t_rt_player::t_rt_player(const QAudioDeviceInfo &out, QObject *parent):
+    t_rt_output(parent, QDir(":/config/js_config_sndsink.txt")), output_dev(out)
 {
-
-//    QList<QAudioDeviceInfo> infos = QAudioDeviceInfo::avaiableDevices();
-//    QAudioDeviceInfo infodef =  QAudioDeviceInfo::defaultInputDevice();
-//    QList<QAudioFormat::Endian> def_bord = in.supportedByteOrders();
-//    QList<int> 	def_ch = in.supportedChannels();
-//    QStringList def_codecs = in.supportedCodecs();
-//    QList<QAudioFormat::SampleType> def_types = in.supportedSampleTypes();
-
-    /*! @todo - sem vrazit pripadne nejake prevzorkovani pokud je vstupni frekvence jina nez prehravaci*/
-
-    t_setup_entry fr(out.supportedFrequencies().toJson().toArray(), "Hz");  //recent list
-    int fr_a = set["Rates"].get().toInt();  //actual frequency
-    set.insert("Rates", fr);  //update list
-    fr.set(fr_a); //select original frequnecy of default if doesnt exist
-
-    //zvolime defaultni vzorkovacku
-    sta.fs_out = sta.fs_in = set["Rates"].get(); //nastavime 8Khz - tedy pokud tam jsou, jinak zustava 1. hodnota
+    QJsonArray jfrl;  //conversion
+    QList<int> qfrl = out.supportedSampleRates();
+    foreach(int f, qfrl) jfrl.append(f);
+    t_setup_entry fr(jfrl, "Hz");  //recent list
+    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
 
     output_io = 0;
     output_audio = 0;
@@ -93,9 +81,8 @@ void t_rt_player::process(){
 
         if(sta.state == t_rt_status::ActiveState){
 
-            qint64 avaiable_l = output_audio->bytesReady();//input_io->bytesAvailable();
-
-            if(avaiable_l < t_amp.i){ ; }  // !!nestihame prehravat --> zahazujem vzorky
+            qint64 avaiable_l = output_audio->bytesFree();
+            if(avaiable_l < t_amp.i){ ; }  /*! \todo - !!nestihame prehravat --> zahazujem vzorky */
             else if(avaiable_l > t_amp.i) avaiable_l = t_amp.i;  //stihame; staci nam jen prostor na jeden radek
 
             short local_samples[avaiable_l];  //vycteni dostupneho
@@ -150,7 +137,7 @@ void t_rt_player::error_audio_state(void){
         }
 }
 
-void t_rt_output::change(){
+void t_rt_player::change(){
 
 //    format.setByteOrder(QAudioFormat::LittleEndian); //pevne
 //    format.setChannelCount(1); //pevne
@@ -171,10 +158,9 @@ void t_rt_output::change(){
         return; //tak to neklaplo - takovy format nemame
     }
 
-    sta.fs_out = format.frequency();
-
-    int N = set["Multibuffer"].get().toInt();
-    int M = set["Time"].get().toInt() / 1000.0 * sta.fs_out;
+    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
+    int N = set["Multibuffer"].get().toDouble();
+    int M = set["Time"].get().toDouble() / 1000.0 * sta.fs_out;
 
     t_slcircbuf::resize(M); //novy vnitrni multibuffer
 
@@ -188,7 +174,8 @@ void t_rt_output::change(){
     t_slcircbuf::init(dfs); //nastavime vse na stejno
     t_slcircbuf::clear(); //vynulujem ridici promenne - zacnem jako po startu na inx 0
 
-    output_audio->setNotifyInterval(set.refreshRt[set.refreshI].v);  //navic mame to od byteready
+    int mmrt = set["__refresh_rate"].get().toDouble() * sta.fs_out * 1000;
+    output_audio->setNotifyInterval(mmrt); //v ms
     connect(output_audio, SIGNAL(notify()), SLOT(process()));
     connect(output_audio, SIGNAL(stateChanged(QAudio::State)), SLOT(change_audio_state(QAudio::State)));   //s chybou prechazi AudioInput do stavi Stopped
 

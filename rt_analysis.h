@@ -20,7 +20,7 @@ public slots:
     void pause();
 
 public:
-    t_rt_analysis(QObject *parent = 0, const QDir &config = QDir());
+    t_rt_analysis(QObject *parent, const QDir &config = QDir());
     virtual ~t_rt_analysis(){;}
 };
 

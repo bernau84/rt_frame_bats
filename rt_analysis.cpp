@@ -203,7 +203,12 @@ t_rt_shift::t_rt_shift(QObject *parent):
 void t_rt_shift::process(){
 
     int D = set["Bands"].get().toDouble();  //pocet pasem na oktavu
-    QJsonArray selected = set["Select"].get().toArray();  //vyber co jde ven
+
+    QJsonArray selected;
+    QJsonValue ts = set["Select"].get();
+    if(ts.isArray()) selected = ts.toArray();  //vyber multiband
+    else if(ts.isDouble()) selected.append(ts.toDouble());  //one selection
+
     uint mask = 0; for(int d=0; d<D; d++) if(selected.contains(d)) mask |= (1 << d);
 
     t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
@@ -312,4 +317,12 @@ void t_rt_shift::change(){
             break;
     }
 }
+
+//------------------------------------------------------------------------
+t_rt_shift::~t_rt_shift(){
+
+    for(int i=0; i<RT_MAX_BANDS_PER_OCTAVE; bank[i++] = 0)
+        if(bank[i]) delete bank[i];
+}
+
 //---------------------------------------------------------------------------

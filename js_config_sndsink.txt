@@ -1,5 +1,13 @@
 
 {
+    "Rates":{
+        "__info": "playback frequency"
+        "__def": 8000,
+        "8khz": 8000,
+        "16kHz": 16000,
+        "32kHz": 32000,
+        "48kHz": 48000
+    },
     "Multibuffer": {
         "__info": "size of Z buffer (number of slices)",
         "small(10)": 10,
@@ -27,8 +35,8 @@
         "1x": 1.0,
         "2x": 0.5,
         "5x": 0.25,
-        "10x": 0.125,
-        "100x": 0.0625,
+        "10x": 0.1,
+        "100x": 0.01,
         "__def": 0.125,
         "__min": 0.001
     }

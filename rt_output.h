@@ -8,31 +8,12 @@
 #include <QAudioFormat>
 #include <QAudioOutput>
 
-class t_coll_output {
-
-public:
-    struct {
-
-        QList<t_base_param_double> refreshList; //v Hz
-        int refreshIndex;
-    } f;
-
-    struct {
-
-        QList<t_base_param_double> timeList; //v sec delka rezu
-        int timeIndex;
-    } t;
-
-    QList<t_base_param_int> historySz;  //pocet rezu
-    int historyI;
-};
-
 class t_rt_output : public t_rt_base
 {
     Q_OBJECT
 public:
     t_collection set;
-    t_rt_output(QObject *parent = 0);
+    t_rt_output(QObject *parent, const QDir &resource = QDir());
 };
 
 class t_rt_player : public t_rt_output
@@ -55,12 +36,9 @@ public slots:
     void change();
 
 public:
-    t_rt_player(const QAudioDeviceInfo &in = QAudioDeviceInfo::defaultOutputDevice(), QObject *parent = 0);
+    t_rt_player(const QAudioDeviceInfo &out = QAudioDeviceInfo::defaultOutputDevice(), QObject *parent = 0);
 };
 
 
 #endif // RT_SOURCES_H
 
-
-
-#endif // RT_OUTPUT_H

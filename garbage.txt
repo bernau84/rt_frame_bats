@@ -50,3 +50,14 @@
 
         return get(title).toArray();
     }
+
+
+    /*! helpers */
+    QJsonArray vlist(){  QJsonArray t; return t; }
+    QStringList slist(){  QStringList t; return t; }
+    QStringList slist(QVariantList v, QString unit = ""){
+
+        QStringList t;
+        for(int i=0; i < v.count(); i++) t << v[i].toString() + unit;
+        return t;
+    }

@@ -1,7 +1,9 @@
 #include "t_rt_base.h"
 
 t_rt_base::t_rt_base(QObject *parent, const QDir &resource) :
-    QObject(parent), t_slcircbuf(0)
+    QObject(parent),
+    t_slcircbuf(0),
+    set(__set_from_file(resource.absolutePath()))
 {
     sta.fs_in = (double *)0; //vstupni fs
     sta.fs_out = 0; //vystuni fs
@@ -19,18 +21,21 @@ t_rt_base::t_rt_base(QObject *parent, const QDir &resource) :
         if(!pre) return; //navazujem na kompatibilni prvek? to do test!
         rd_i = pre->attach(this);    //nastavi sta.fs_in a rd_I
     }
+}
+
+QJsonObject t_rt_base::__set_from_file(const QString path){
 
     /*! default config */
-    QFile f_def(resource.absolutePath());  //from resources
+    QFile f_def(path);  //from resources
     if(f_def.open(QIODevice::ReadOnly | QIODevice::Text)){
 
         QByteArray f_data = f_def.read(64000);
         QJsonDocument js_doc = QJsonDocument::fromJson(f_data);
-        if(!js_doc.isEmpty()){
-
-            set(js_doc.object());
-        }
+        if(!js_doc.isEmpty())
+            return js_doc.object();
     }
+
+    return QJsonObject();
 }
 
 

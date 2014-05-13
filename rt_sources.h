@@ -11,7 +11,7 @@ class t_rt_sources : public t_rt_base //, public QThread
     Q_OBJECT
 public:
     t_collection set;
-    t_rt_sources(QObject *parent = 0);
+    t_rt_sources(QObject *parent, const QDir &resource = QDir());
 };
 
 class t_rt_snd_card : public t_rt_sources

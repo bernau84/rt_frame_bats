@@ -44,6 +44,10 @@ public:
 class t_rt_base : public QObject, public t_slcircbuf
 {
     Q_OBJECT
+private:
+    //constructor helpers
+    QJsonObject __set_from_file(const QString path);
+    QJsonObject __set_from_binary(const QByteArray path){ Q_UNUSED(path); }
 
 protected:
     int rd_n;   //pocet registrovanych prvku pro cteni

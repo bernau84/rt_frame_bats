@@ -11,16 +11,18 @@ Napojeni plotu
 - aby to nerusilo; tady asi nebude vadit kdyz nebudu stihat
 
 Konfigurace
-- defaultni kjonfig soucasti resourcu (zdrojaku) at to nestrasi v kodu
+- defaultni konfig soucasti resourcu (zdrojaku) at to nestrasi v kodu
 - json vsude + rozlisujem extra honoty jako min, max, act, def a info
-- merge user a default jcon konfigurace (asi jen pokud existuje v user tak se tim prepise)
+? jak sme na tom s podporiu multiselectu (polozka musi by QJsonArray a musime o tom vedet a v kodu s tim tak zachazet!)
+- merge user a default jcon konfigurace (asi jen pokud existuje v def tak se tim prepise)
+! nepodporuje pridani polozek ktere nejsoiu v default (kdyz na to neni kod staven ze...)
 ! neni problem import a export pres QJsonDocument ale neni jasne jestli rozhrannim bude soubor nebo nejaky protokol...proto nechavame byt
-? jak resit konfiguraci zapojeni prvku? (ale a project file?)
 x jak pojmenovavat jednotlive souboru k jednotlivym prvkum - nechavame na vyssich vrstvach, hlavne nezadny defaultni nazvoslovi (to postatne mame v resourcech)
 - zmena parametru za behu je mozna primo do kolekce ktera je public, nasledne pustit metodu change() pokud je to nutne ktery vyvola reset prvku (stop & change & state restore)
         a odpali reakci k podrizenym prvkum
 NOTES
-
+? jak resit konfiguraci zapojeni prvku? (ale a project file?)
+? podpora skriptobvani (pridani custom prvku....nebo pres konfiguraci)
 * preprocess vyhodime, vyuzijem usus ze na jakykoli prvek muzem napojit jakykoli dalsi - rozhranni je identicke
 ?! inheritance operatoru? asi ano ale co to jako dela?
 ? vicevstupy nod?

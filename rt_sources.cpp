@@ -2,15 +2,15 @@
 #include "rt_basictypes.h"
 #include <QtDebug>
 
-t_rt_sources::t_rt_sources(QObject *parent):
-    t_rt_base(parent)
+t_rt_sources::t_rt_sources(QObject *parent, const QDir &resource):
+    t_rt_base(parent, resource)
 {
 }
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
-    t_rt_sources(parent), input_dev(in)
+    t_rt_sources(parent, QDir(":/config/js_config_sndsource.txt")), input_dev(in)
 {
     QJsonArray jfrl;  //conversion
     QList<int> qfrl = in.supportedSampleRates();
