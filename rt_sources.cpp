@@ -12,13 +12,16 @@ t_rt_sources::t_rt_sources(QObject *parent):
 t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
     t_rt_sources(parent), input_dev(in)
 {
-    t_setup_entry fr(in.supportedFrequencies().toJson().toArray(), "Hz");  //recent list
-    int fr_a = set["Rates"].get().toInt();  //actual frequency
-    set.insert("Rates", fr);  //update list
-    fr.set(fr_a); //select original frequnecy of default if doesnt exist
+    QJsonArray jfrl;  //conversion
+    QList<int> qfrl = in.supportedSampleRates();
+    foreach(int f, qfrl) jfrl.append(f);
+    t_setup_entry fr(jfrl, "Hz");  //recent list
+    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
 
-    //zvolime defaultni vzorkovacku
-    sta.fs_out = sta.fs_in = set["Rates"].get(); //vyctem
+    set.replace("Rates", fr);  //update list
+    sta.fs_out = set["Rates"].set(sta.fs_out).toDouble(); //select original frequnecy of default if doesnt exist
+
+    *sta.fs_in = sta.fs_out;  //on source is io fr equal
 
     input_io = 0;
     input_audio = 0;
@@ -102,6 +105,7 @@ void t_rt_snd_card::process(){
 
 void t_rt_snd_card::change_audio_state(QAudio::State act){
 
+    act;
 //    if(input_audio) //bylo uz zinicializovano?
 //        if(input_audio->state() == QAudio::StoppedState)
 //            error_audio_state(); //diagnostika chyb
@@ -145,11 +149,9 @@ void t_rt_snd_card::change(){
         return; //tak to neklaplo - takovy format nemame
     }
 
-    sta.fs_out = format.frequency();
-    sta.fs_in = &sta.fs_out;   //dany predcozi prvek def. vzorkovacku neni
-
-    int N = set["Multibuffer"].get().toInt();
-    int M = set["Refresh"].get().toInt() / 1000.0 * sta.fs_out;
+    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
+    int N = set["Multibuffer"].get().toDouble();
+    int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
 
     t_slcircbuf::resize(M); //novy vnitrni multibuffer
 
@@ -163,7 +165,7 @@ void t_rt_snd_card::change(){
     t_slcircbuf::init(dfs); //nastavime vse na stejno
     t_slcircbuf::clear(); //vynulujem ridici promenne - zacnem jako po startu na inx 0
 
-    input_audio->setNotifyInterval(set.refreshRt[set.refreshI].v);  //navic mame to od byteready
+    input_audio->setNotifyInterval(set["Refresh"].get().toDouble());  //navic mame to od byteready
     connect(input_audio, SIGNAL(notify()), SLOT(process()));
     connect(input_audio, SIGNAL(stateChanged(QAudio::State)), SLOT(change_audio_state(QAudio::State)));   //s chybou prechazi AudioInput do stavi Stopped
 

@@ -2,8 +2,8 @@
 #include "rt_basictypes.h"
 
 //---------------------------------------------------------------------------
-t_rt_analysis::t_rt_analysis(QObject *parent):
-    t_rt_base(parent)
+t_rt_analysis::t_rt_analysis(QObject *parent, const QDir &config):
+    t_rt_base(parent, config)
 {
 
 }
@@ -23,13 +23,13 @@ void t_rt_analysis::pause(){
 t_rt_cpb::t_rt_cpb(QObject *parent):
     t_rt_analysis(parent, QDir(":/config/js_config_cpbanalysis.txt"))
 {
-    double decif[1024], passf[1] = 1.0;
+    double decif[1024], passf[1] = {1.0};
 
-    int rN = set["__oct_deci_directfir"].db("num", decif, sizeof(decif)/sizeof(decif[0]));
-    t_DirectFilter deci(decif, (double *)0, rN, 2);
-    t_DirectFilter pass(passf, (double *)0, 1);
+    gd = set["__oct_deci_directfir"].db("num", decif, sizeof(decif)/sizeof(decif[0]));
+    t_DirectFilter<double> deci(decif, gd, 2);
+    t_DirectFilter<double> pass(passf, 1);
 
-    bank = new t_DiadicFilterBank(pass, deci, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
+    bank = new t_DiadicFilterBank<double>(pass, deci, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
 
     for(int i=0; i<RT_MAX_OCTAVES_NUMBER;                            i++) dline[i] = 0; //vynulujem
     for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE;  i++) aline[i] = 0;
@@ -147,31 +147,31 @@ void t_rt_cpb::change(){
         if(aver[i]) delete aver[i];
 
     //napocitame jen takove zpozdeni ktere je nezbytne
-    double delay[N], gd = sizeof(def_decim_num)/sizeof(double)/2.0 + 1;
+    double delay[N];
     for(int i=0; i<N; i++){
 
         delay[i] = gd * ((1 << (N-i)) - 1);
-        dline[i] = new t_DelayLine((double *)0, (double *)0, (int)delay[i]); //inicializace delay line
+        dline[i] = new t_DelayLine<double>(round(delay[i])); //inicializace delay line
 
         //podporujem jen IIR prumerovani; lin je nerealne pro pocet koef;
         //s vyssi oktavou staci rychlejsi filtr; pod casovou konstantu 1 se ale dostat nechceme, rychlejsi uz proste nebudem
         double avr_k = 1 /* *sta.fs_in/ (2 << i) */;  if(avr_k < 1.0) avr_k = 1.0;
         double avr_num[2] = {1.0 / avr_k, 0.0}, avr_den[2] = {1.0, 1.0 - 1/avr_k};
-        for(unsigned int j=0; j<M; j++)
-            aver[i*M + j] = (t_pFilter *) new t_CanonFilter(avr_num, avr_den, 2);
+        for(int j=0; j<M; j++)
+            aver[i*M + j] = (t_pFilter<double> *) new t_CanonFilter<double>(avr_num, avr_den, 2);
 
         int rn = 0;
         double num[256], den[256];
         char pcpb[64], pnum[16], pden[16];
 
         snprintf(pcpb, sizeof(pcpb), "__%d_cpb_biquadiir", M);
-        for(unsigned int j=0; j<M; j++){
+        for(int j=0; j<M; j++){
 
             snprintf(pnum, sizeof(pnum), "num%d", j);
             snprintf(pden, sizeof(pden), "den%d", j);
             rn = set[pcpb].db(pnum, num, sizeof(num)/sizeof(num[0]));
             rn = set[pcpb].db(pden, den, sizeof(den)/sizeof(den[0]));
-            aline[i*M + j] = (t_pFilter *) new t_BiQuadFilter(num, den, rn/3);
+            aline[i*M + j] = (t_pFilter<double> *) new t_BiQuadFilter<double>(num, den, rn/3);
         }
     }
 
@@ -252,7 +252,7 @@ void t_rt_shift::process(){
         }
     }
 
-    t_slcircbuf::set(&p_cpb, 1);  //vratime aktualni cpb spektrum
+    t_slcircbuf::set(&p_shift, 1);  //vratime aktualni cpb spektrum
 }
 
 //------------------------------------------------------------------------
@@ -292,7 +292,7 @@ void t_rt_shift::change(){
     for(int i=0; i<D; i++){
 
         for(int j= 0; j<rn; j++) sh_coe[j] = coe[j] * cos((2*PI*j) * (1.0*i/D));  //freq. shift
-        bank[i] = (t_pFilter *) new t_DirectFilter(sh_coe, NULL, rn, D);
+        bank[i] = (t_pFilter<double> *) new t_DirectFilter<double>(sh_coe, rn, D);
         for(int j=0; j<(D-i); j++) bank[i]->Process(0.0, NULL);  //finta - inicizizace vnitrniho buferu nulami
                 //kazdy filtr je inicializaovan jinak takze kazdy se v ramci decimace pocita
                 //s ruznym vzorkem - zajistuje harmonizaci rychlosti vypoctu

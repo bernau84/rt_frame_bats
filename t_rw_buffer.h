@@ -26,7 +26,7 @@ template <class DT_TYP> class TBuffer {
         UINT           length;
     public:
         //zakladni operace
-        TbufState      AddSample( DT_TYP sample );   //jednoduche pridani vzorku - aby se to nekomplikovalo memcpy
+        TbufState      AddSample(const DT_TYP sample );   //jednoduche pridani vzorku - aby se to nekomplikovalo memcpy
         TbufState      GetSample( DT_TYP *sample );  //jednoduche cteni vzorku
         //opreace na pointrech
         TbufState      SetActual( DT_TYP *_a_pos );  //cteni aktualni hodnoty - bez posuvu
@@ -37,7 +37,7 @@ template <class DT_TYP> class TBuffer {
         void      MoveActual( int shift, int );
         void      SetActual( DT_TYP *_a_pos, int );
         //obecne blokove operace
-        TbufState      AddSample( DT_TYP *p_src, UINT *n_src );          //vzdy posunuje ukazatel dopredu
+        TbufState      AddSample(const DT_TYP *p_src, UINT *n_src );          //vzdy posunuje ukazatel dopredu
         TbufState      GetSample( DT_TYP *p_dst, UINT *n_dst );          //pokud neni kruhovy, pak jde ukazatel dozadu
 
         TBuffer( DT_TYP *_b_pos, UINT _length, TbufModes _mode );
@@ -97,7 +97,7 @@ template <class DT_TYP> TbufState TBuffer<DT_TYP>::MoveActual( int shift ) {
 }
 
 /******************************************************************************/
-template <class DT_TYP> TbufState TBuffer<DT_TYP>::AddSample( DT_TYP sample ) {
+template <class DT_TYP> TbufState TBuffer<DT_TYP>::AddSample(const DT_TYP sample ) {
 
       if( state != BS_FULL ) *a_pos++ = sample;
       if( (a_pos - b_pos) == length ){ //nebo a_pos = b_pos + (b_pos-a_pos) % length
@@ -167,7 +167,7 @@ template <class DT_TYP> TbufState TBuffer<DT_TYP>::GetActual( DT_TYP **_a_pos ){
 }
 //BLOCK OPERATION
 /******************************************************************************/
-template <class DT_TYP> TbufState TBuffer<DT_TYP>::AddSample( DT_TYP *p_src, UINT *n_src ) {
+template <class DT_TYP> TbufState TBuffer<DT_TYP>::AddSample(const DT_TYP *p_src, UINT *n_src ) {
 
       UINT n_free;
 

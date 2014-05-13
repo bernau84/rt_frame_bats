@@ -1,7 +1,7 @@
 #include "t_rt_base.h"
 
-t_rt_base::t_rt_base(QObject *parent, const QDir &config = QDir()) :
-    QObject(parent), set(config), t_slcircbuf(0)
+t_rt_base::t_rt_base(QObject *parent, const QDir &resource) :
+    QObject(parent), t_slcircbuf(0)
 {
     sta.fs_in = (double *)0; //vstupni fs
     sta.fs_out = 0; //vystuni fs
@@ -21,14 +21,14 @@ t_rt_base::t_rt_base(QObject *parent, const QDir &config = QDir()) :
     }
 
     /*! default config */
-    QFile f_def(resource);  //from resources
+    QFile f_def(resource.absolutePath());  //from resources
     if(f_def.open(QIODevice::ReadOnly | QIODevice::Text)){
 
         QByteArray f_data = f_def.read(64000);
         QJsonDocument js_doc = QJsonDocument::fromJson(f_data);
         if(!js_doc.isEmpty()){
 
-            set = js_doc.object();
+            set(js_doc.object());
         }
     }
 }

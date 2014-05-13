@@ -27,7 +27,8 @@ HEADERS  += mainwindow.h\
 	t_rw_buffer.h\
 	rt_basictypes.h \
     rt_multibuffer.h \
-    rt_output.h
+    rt_output.h \
+    freq_rt_filtering.h
 
 FORMS    += mainwindow.ui
 

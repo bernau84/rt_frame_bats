@@ -2,10 +2,13 @@
 #define RT_BASICTYPES_H
 
 #include <QString>
+#include <QStringList>
 #include <QObject>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QVariant>
+#include <QVariantList>
 
 class t_collection;
 
@@ -176,11 +179,13 @@ public:
     }
 };
 
-/*! list of JSonObject as attrbutes presendet outside as t_setup_enty item
+/*! \class list of JSonObject as attrbutes presendet outside as t_setup_enty item
  * list of object is hidden as private, read must be done via ask,
- * write via udate */
+ * write via udate
+ * \warning adding entry is not allowed in user space
+ */
 
-class t_collection : private QObject, QJsonObject {
+class t_collection : public QObject, private QJsonObject {
 
     Q_OBJECT
 signals:
@@ -198,9 +203,9 @@ public:
         return t;
     }
 
-    /*! \brief insert or replace attribute from user
+    /*! \brief replace attribute from user
     */
-    void insert(QString &title, const t_setup_entry &attribute){
+    void replace(const QString &title, const t_setup_entry &attribute){
 
         QJsonObject::iterator ai = find(title);
         if(ai == end())
@@ -242,8 +247,8 @@ public:
 
     /*! \brief create & inicialize
      */
-    explicit t_collection(QObject *parent,  QJsonObject &def):
-        QObject(parent), QJsonObject(def){
+    explicit t_collection(const QJsonObject &def):
+        QObject(0), QJsonObject(def){
 
     }
 };

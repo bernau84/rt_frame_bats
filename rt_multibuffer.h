@@ -75,7 +75,7 @@ template <typename T, int N> bool t_multibuffer<T, N>::isOver(int n){
 //varianta NO_AVAIL_CHECK nehlida kde je zapisovaci pointer
 template <typename T, int N> int t_multibuffer<T, N>::get(T *smp, int len, int n){
 
-    int plen, L = len;
+    int L = len;
     int nn = n % N;
     int bmark = rmark[nn];     //zaloha cteciho pointeru
 
@@ -211,9 +211,9 @@ template <typename T, int N> int t_multibuffer<T, N>::write(T smp){
     buf[wmark++] = smp;
     if(wmark >= size) wmark = 0;
 
-    for(int nn=0; nn<N; nn++)  //testujem pro vsechny cteci pointery!
+    for(int nn=0; nn < N; nn++)  //testujem pro vsechny cteci pointery!
         if((overflow[nn] > 0) || (wmark == rmark[nn]))  //musime testovat znovu po updatu
-            overflow[nn] = (overflow[nn]++) % size; //vetsi preteceni nez size neindikujem, po prvnim srovnani je overflow 0 == FULL
+            overflow[nn] = (overflow[nn]+1) % size; //vetsi preteceni nez size neindikujem, po prvnim srovnani je overflow 0 == FULL
 
     unlock();
 
