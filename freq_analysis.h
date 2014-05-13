@@ -104,7 +104,7 @@ class t_pFilter{
 
     protected:
         TBuffer<double>   *shift_reg;   //vytvari se instance
-        double            *coeff_num;   //kopiruje se jen ukazatel
+        std::array<double> *coeff_num;   //kopiruje se jen ukazatel
         double            *coeff_den;
         double            *shift_dat;   //vytvari se instance
         int               N;            //!!!pocet koeficientu
