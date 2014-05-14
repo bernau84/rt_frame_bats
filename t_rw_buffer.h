@@ -26,7 +26,7 @@ template <class DT_TYP> class TBuffer {
         UINT           length;
     public:
         //zakladni operace
-        TbufState      AddSample(const DT_TYP sample );   //jednoduche pridani vzorku - aby se to nekomplikovalo memcpy
+        TbufState      AddSample(const DT_TYP sample);   //jednoduche pridani vzorku - aby se to nekomplikovalo memcpy
         TbufState      GetSample( DT_TYP *sample );  //jednoduche cteni vzorku
         //opreace na pointrech
         TbufState      SetActual( DT_TYP *_a_pos );  //cteni aktualni hodnoty - bez posuvu
@@ -37,7 +37,7 @@ template <class DT_TYP> class TBuffer {
         void      MoveActual( int shift, int );
         void      SetActual( DT_TYP *_a_pos, int );
         //obecne blokove operace
-        TbufState      AddSample(const DT_TYP *p_src, UINT *n_src );          //vzdy posunuje ukazatel dopredu
+        TbufState      AddSample(const DT_TYP *p_src, UINT *n_src);          //vzdy posunuje ukazatel dopredu
         TbufState      GetSample( DT_TYP *p_dst, UINT *n_dst );          //pokud neni kruhovy, pak jde ukazatel dozadu
 
         TBuffer( DT_TYP *_b_pos, UINT _length, TbufModes _mode );
@@ -47,16 +47,16 @@ template <class DT_TYP> class TBuffer {
 
 /******************************************************************************/
 /******************************************************************************/
-template <class DT_TYP> TBuffer<DT_TYP>::TBuffer( DT_TYP *_b_pos, UINT _length, TbufModes _mode )
-      :b_pos(_b_pos),length(_length), mode(_mode) {
+template <class DT_TYP> TBuffer<DT_TYP>::TBuffer(DT_TYP *_b_pos, UINT _length, TbufModes _mode):
+      mode(_mode), b_pos(_b_pos), length(_length) {
 
       a_pos = b_pos;
       state = BS_EMPTY;
 }
 
 /******************************************************************************/
-template <class DT_TYP> TBuffer<DT_TYP>::TBuffer( TBuffer<DT_TYP> &_origin )
-      :b_pos(_origin.b_pos),length(_origin.length), mode(_origin.mode) {
+template <class DT_TYP> TBuffer<DT_TYP>::TBuffer(TBuffer<DT_TYP> &_origin):
+      mode(_origin.mode), length(_origin.length), b_pos(_origin.b_pos){
 
       a_pos = b_pos;
       state = BS_EMPTY;

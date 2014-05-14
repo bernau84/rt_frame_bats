@@ -1,10 +1,8 @@
-TO DO
-
 Indikace rizika preteceni / preteceni
 - indikaci mohu vyrobit stopovanim zporacovani jedna davky;
     vim jakou frekvenci to vzorkovac dava, takze vim jak rychle to musim zpracovat
 - preteceni je jasne - to mam v multibufferu
-- nejak to indikovat ve statusu?
+? nejak to indikovat ve statusu
 
 Napojeni plotu
 - az budu delat tak pres queue signaly a tim ze ve fronte muze byt takovy pozadavek pouze 1x
@@ -12,7 +10,7 @@ Napojeni plotu
 
 Konfigurace
 - defaultni konfig soucasti resourcu (zdrojaku) at to nestrasi v kodu
-- json vsude + rozlisujem extra honoty jako min, max, act, def a info
+- json vsude + rozlisujem extra hodnoty jako min, max, act, def a info
 ? jak sme na tom s podporiu multiselectu (polozka musi by QJsonArray a musime o tom vedet a v kodu s tim tak zachazet!)
 - merge user a default jcon konfigurace (asi jen pokud existuje v def tak se tim prepise)
 ! nepodporuje pridani polozek ktere nejsoiu v default (kdyz na to neni kod staven ze...)
@@ -20,14 +18,15 @@ Konfigurace
 x jak pojmenovavat jednotlive souboru k jednotlivym prvkum - nechavame na vyssich vrstvach, hlavne nezadny defaultni nazvoslovi (to postatne mame v resourcech)
 - zmena parametru za behu je mozna primo do kolekce ktera je public, nasledne pustit metodu change() pokud je to nutne ktery vyvola reset prvku (stop & change & state restore)
         a odpali reakci k podrizenym prvkum
+
+Tracovani
+- kouknout jestli enexistuje nejaky hotovy system logovani (na pozadi, nesmi nic brzdit!)
+
 NOTES
-? jak resit konfiguraci zapojeni prvku? (ale a project file?)
-? podpora skriptobvani (pridani custom prvku....nebo pres konfiguraci)
+? jak resit konfiguraci zapojeni prvku? (ala a project file?)
+? podpora skriptovani (pridani custom prvku....nebo pres konfiguraci)
 * preprocess vyhodime, vyuzijem usus ze na jakykoli prvek muzem napojit jakykoli dalsi - rozhranni je identicke
 ?! inheritance operatoru? asi ano ale co to jako dela?
-? vicevstupy nod?
-! uzivatelska nastaveni odehravat pres preddka t_collection (nomalne import a export pres QJsonDocument!)
+? vicevstupy nod
+! uzivatelska nastaveni odehravat pres predka t_collection (nomalne import a export pres QJsonDocument!)
 
-
-!!chyba jako brno - koeficienty filtru musi byt umisteny globalne mam ten dojem
-!!musim je nakopat na heap nebo do lok. poli jednotlivych trid...grr

@@ -44,7 +44,7 @@ void t_rt_snd_card::start(){
                 break;
             case QAudio::StoppedState:
                 if(input_io) disconnect(input_io, 0, this, 0);
-                if((input_io = input_audio->start()));  //zapiname pull mode
+                if((input_io = input_audio->start()))  //zapiname pull mode
                     connect(input_io, SIGNAL(readyRead()), SLOT(process()));
                 break;
             case QAudio::IdleState:
@@ -107,7 +107,7 @@ void t_rt_snd_card::process(){
 
 void t_rt_snd_card::change_audio_state(QAudio::State act){
 
-    act;
+    Q_UNUSED(act);
 //    if(input_audio) //bylo uz zinicializovano?
 //        if(input_audio->state() == QAudio::StoppedState)
 //            error_audio_state(); //diagnostika chyb

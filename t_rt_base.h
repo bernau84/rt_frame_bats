@@ -56,7 +56,11 @@ class t_rt_base : public QObject, public t_slcircbuf
 private:
     //constructor helpers
     QJsonObject __set_from_file(const QString path);
-    QJsonObject __set_from_binary(const QByteArray path){ Q_UNUSED(path); }
+    QJsonObject __set_from_binary(const QByteArray path){
+        /*! \todo - from JsonDocument binary of from remote data */
+        Q_UNUSED(path);
+        return QJsonObject();
+    }
 
 protected:
     int rd_n;   //pocet registrovanych prvku pro cteni
