@@ -7,17 +7,24 @@
 #include "rt_multibuffer.h"
 #include "rt_basictypes.h"
 
-typedef class T_RT_SLICE {
+template <class T> class t_rt_slice {
 
 public:
-    QVector<double> A;
-    QVector<double> f;
-    int i;
-    double t;
-} t_rt_slice;
+    typedef struct {
+
+        T   A;
+        T   f;
+    } t_rt_tf;
+
+    QVector<t_rt_tf> v;  //frekvencni a amplitudove koeficienty by default
+    T                t; //time mark of this slice
+
+    t_rt_slice(T _t = T(), int N = 0):
+        v(N), t(_t){;}
+};
 
 #define RT_MAX_SUCCESSORS   6
-typedef t_multibuffer<t_rt_slice, RT_MAX_SUCCESSORS> t_slcircbuf;
+typedef t_multibuffer<t_rt_slice<double>, RT_MAX_SUCCESSORS> t_slcircbuf;
 typedef t_multibuffer<double, RT_MAX_SUCCESSORS> t_fcircbuf;
 typedef t_multibuffer<short, RT_MAX_SUCCESSORS> t_s16circbuf;
 typedef t_multibuffer<int, RT_MAX_SUCCESSORS> t_s32circbuf;

@@ -72,14 +72,16 @@ void t_rt_cpb::process(){
 
     t_rt_slice p_cpb;   //radek soucasneho spektra
     t_slcircbuf::get(&p_cpb, 1);  //vyctem aktualni cpb spektrum
+    if(p_cpb.v.size() != M) //alokace pokud je to novy
+        p_cpb.v.resize(M);
 
     t_rt_slice t_amp;  //radek caovych dat
     while(pre->t_slcircbuf::read(&t_amp, rd_i)){ //vyctem radek
 
-        for(int i=0; i<t_amp.i; i++){
+        for(int i=0; i<t_amp.v.size(); i++){
 
             double lp_st[RT_MAX_OCTAVES_NUMBER]; //
-            int n = bank->Process(t_amp.A[i], lp_st);  //decimacni banka; updatuje vzorek [0] a [n]
+            int n = bank->Process(t_amp.v[i].A, lp_st);  //decimacni banka; updatuje vzorek [0] a [n]
 
             if(n >= N) //dal pocitame jen ty oktavy ktere jsme si porucily - decimace probiha v max rozliseni (na vykonu to neubira)
                 continue;
@@ -92,20 +94,17 @@ void t_rt_cpb::process(){
                 double a_st_0 = aline[j]->Process(d_st_0, 0); //cpb analyticke filtru
                 double a_st_n = aline[n*M + j]->Process(d_st_n, 0);
 
-                p_cpb.A[j]       = aver[j]->Process(a_st_0, 0); //vypocet uprade hodnot v bufferu
-                p_cpb.A[n*M + j] = aver[n*M + j]->Process(a_st_n, 0);
+                p_cpb.v[j].A       = aver[j]->Process(a_st_0, 0); //vypocet uprade hodnot v bufferu
+                p_cpb.v[n*M + j].A = aver[n*M + j]->Process(a_st_n, 0);
             }
 
             //prepis vypocetnych na nove pokud uplynula doba prumerovani
-            if((1 + nn_tot) / sta.fs_out <= t_amp.f[i]){ //je cas vzorku vetsi nez doba od dalsiho spektra
+            if((1 + nn_tot) / sta.fs_out <= t_amp.t + i / *sta.fs_in){ //je cas vzorku vetsi nez doba od dalsiho spektra
 
                 t_slcircbuf::write(p_cpb); //zapisem novy jeden radek
                 t_slcircbuf::readShift(1); //a novy pracovni si hned vyctem
                 t_slcircbuf::get(&p_cpb, 1);
-
-                p_cpb.i = 0; //jdem od zacatku
-                p_cpb.t = nn_tot / sta.fs_out; //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
-
+                p_cpb = t_rt_slice(nn_tot / sta.fs_out); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
                 nn_tot += 1;  //novy rez
             }
         }
@@ -131,7 +130,7 @@ void t_rt_cpb::change(){
     QVector<double> cpb_f(N*M, 0); for(int fn=0; fn < M*N; fn++) cpb_f[fn] = fn; //mozno ale pocitat centralni frekvence filtru
     dfs.A = QVector<double>(N*M, 0);
     dfs.f = cpb_f;
-    dfs.i = 0;
+    dfs.avail = 0;
     dfs.t = 0.0; //vse na 0
 
     t_slcircbuf::init(dfs); //nastavime vse na stejno
@@ -227,7 +226,7 @@ void t_rt_shift::process(){
     t_rt_slice t_amp;  //radek caovych dat
     while(pre->t_slcircbuf::read(&t_amp, rd_i)){ //vyctem radek
 
-        for(int i=0; i<t_amp.i; i++){
+        for(int i=0; i<t_amp.avail; i++){
 
             int dd, m  = (nn_tot++ % D);
             double t_filt = bank[m]->Process(t_amp.A[i], &dd);  //band pass & decimace
@@ -237,22 +236,22 @@ void t_rt_shift::process(){
                 if(m & 0x1) //mirroring u lichych pasem
                     t_filt *= -1;
 
-                p_shift.A[p_shift.i] += t_filt;  //scitame s prispevky od jinych filtru (pokud jsou vybrany)
+                p_shift.A[p_shift.avail] += t_filt;  //scitame s prispevky od jinych filtru (pokud jsou vybrany)
             }
 
             if(m == (D-1)){  //mame hotovo (decimace D) vzorek muze jit ven
 
-                p_shift.f[p_shift.i] = nn_tot / *sta.fs_in; //vkladame cas kazdeho vzorku
-                if((p_shift.i += 1) == p_shift.A.count()) {
+                p_shift.f[p_shift.avail] = nn_tot / *sta.fs_in; //vkladame cas kazdeho vzorku
+                if((p_shift.avail += 1) == p_shift.A.count()) {
 
                     t_slcircbuf::write(p_shift); //zapisem novy jeden radek
                     t_slcircbuf::readShift(1); //a novy pracovni si hned vyctem
                     t_slcircbuf::get(&p_shift, 1);
-                    p_shift.i = 0; //jdem od zacatku
+                    p_shift.avail = 0; //jdem od zacatku
                     p_shift.t = nn_tot / *sta.fs_in; //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
                 }
 
-                p_shift.A[p_shift.i] = 0.0;  //pripravime novy
+                p_shift.A[p_shift.avail] = 0.0;  //pripravime novy
             }
         }
     }
@@ -280,7 +279,7 @@ void t_rt_shift::change(){
     t_rt_slice dfs;
     dfs.A = QVector<double>(N, 0);
     dfs.f = QVector<double>(N, 0);
-    dfs.i = 0;
+    dfs.avail = 0;
     dfs.t = 0.0; //vse na 0
 
     t_slcircbuf::init(dfs); //nastavime vse na stejno

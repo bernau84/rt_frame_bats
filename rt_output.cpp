@@ -82,24 +82,24 @@ void t_rt_player::process(){
         if(sta.state == t_rt_status::ActiveState){
 
             qint64 avaiable_l = output_audio->bytesFree();
-            if(avaiable_l < t_amp.i){ ; }  /*! \todo - !!nestihame prehravat --> zahazujem vzorky */
-            else if(avaiable_l > t_amp.i) avaiable_l = t_amp.i;  //stihame; staci nam jen prostor na jeden radek
+            if(avaiable_l < t_amp.avail){ ; }  /*! \todo - !!nestihame prehravat --> zahazujem vzorky */
+            else if(avaiable_l > t_amp.avail) avaiable_l = t_amp.avail;  //stihame; staci nam jen prostor na jeden radek
 
             short local_samples[avaiable_l];  //vycteni dostupneho
 
             for(int i=0; i < avaiable_l; i++){  //konverze do shortu a zapis
 
                 local_samples[i] = t_amp.A[i] * scale;
-                if(wrks.i < wrks.A.count()){
+                if(wrks.avail < wrks.A.count()){
 
-                    wrks.f[wrks.i] = nn_tot++ / *sta.fs_in; //vkladame cas kazdeho vzorku
-                    wrks.A[wrks.i++] = t_amp.A[i];
+                    wrks.f[wrks.avail] = nn_tot++ / *sta.fs_in; //vkladame cas kazdeho vzorku
+                    wrks.A[wrks.avail++] = t_amp.A[i];
                 } else {
 
                     t_slcircbuf::write(wrks); //zapisem novy jeden radek
                     t_slcircbuf::readShift(1); //a novy pracovni si hned vyctem
                     t_slcircbuf::get(&wrks, 1);
-                    wrks.i = 0; //jdem od zacatku
+                    wrks.avail = 0; //jdem od zacatku
                     wrks.t = nn_tot / *sta.fs_in; //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
                 }
             }
@@ -168,7 +168,7 @@ void t_rt_player::change(){
     t_rt_slice dfs;
     dfs.A = QVector<double>(N, 0);
     dfs.f = QVector<double>(N, 0);
-    dfs.i = 0;
+    dfs.avail = 0;
     dfs.t = 0.0; //vse na 0
 
     t_slcircbuf::init(dfs); //nastavime vse na stejno

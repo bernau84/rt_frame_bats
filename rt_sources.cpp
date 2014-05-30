@@ -81,21 +81,21 @@ void t_rt_snd_card::process(){
     t_rt_slice wrks; //pracovni radek v multibufferu
     t_slcircbuf::get(&wrks, 1);  //vyctem
 
+    int N = set["Multibuffer"].get().toDouble();
+
     double scale = 1.0 / (1 << (format.sampleSize()-1));  //mame to v signed
     for(int i=0; i<readable_l; i++){  //konverze do double a zapis
 
-        wrks.f[wrks.i] = nn_tot / *sta.fs_in; //vkladame cas kazdeho vzorku
-        wrks.A[wrks.i] = scale*local_samples[i];
-        wrks.i += 1;
+        wrks.v << t_rt_slice::t_rt_tf(*sta.fs_in/2, scale*local_samples[i]); //vkladame akt. frekvenci a amplitudu
+            //akt. frekvence okamzite amp;litudy odpovida nyquistovce
         nn_tot += 1;  //celkovy pocet zpracovanych vzorku
 
-        if(wrks.i == wrks.A.count()) {
+        if(wrks.v.size() == N) {
 
             t_slcircbuf::write(wrks); //zapisem novy jeden radek
             t_slcircbuf::readShift(1); //a novy pracovni si hned vyctem
             t_slcircbuf::get(&wrks, 1);
-            wrks.i = 0; //jdem od zacatku
-            wrks.t = nn_tot / *sta.fs_in; //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
+            wrks = t_rt_slice(nn_tot / *sta.fs_in); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
         }
     }
 
@@ -159,7 +159,7 @@ void t_rt_snd_card::change(){
     t_rt_slice dfs;
     dfs.A = QVector<double>(N, 0);
     dfs.f = QVector<double>(N, 0);
-    dfs.i = 0;
+    dfs.avail = 0;
     dfs.t = 0.0; //vse na 0
 
     t_slcircbuf::init(dfs); //nastavime vse na stejno
