@@ -17,7 +17,8 @@ SOURCES += main.cpp\
 	rt_analysis.cpp\
 	rt_sources.cpp\
         t_rt_base.cpp \
-    rt_output.cpp
+    rt_output.cpp \
+    rt_graphics.cpp
 
 HEADERS  += mainwindow.h\
 	freq_analysis.h\
@@ -28,7 +29,8 @@ HEADERS  += mainwindow.h\
 	rt_basictypes.h \
     rt_multibuffer.h \
     rt_output.h \
-    freq_rt_filtering.h
+    freq_rt_filtering.h \
+    rt_graphics.h
 
 FORMS    += mainwindow.ui
 

@@ -269,7 +269,6 @@ void t_rt_shift::change(){
 
     pause();
 
-    sta.nn_run = 0;
     sta.fs_out = *sta.fs_in / D;  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
     t_slcircbuf::resize(set["Refresh"].get().toDouble(), true); //novy vnitrni multibuffer
 

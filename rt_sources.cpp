@@ -32,7 +32,8 @@ t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
 
 void t_rt_snd_card::start(){
 
-    sta.nn_run = 0;
+    t_rt_base::start();
+
     if(input_audio)
         switch(input_audio->state()){
 
@@ -53,6 +54,8 @@ void t_rt_snd_card::start(){
 }
 
 void t_rt_snd_card::pause(){
+
+    t_rt_base::pause();
 
     if(input_audio)
         switch(input_audio->state()){
@@ -89,16 +92,15 @@ void t_rt_snd_card::process(){
 
         wrks.v << t_rt_slice::t_rt_tf(*sta.fs_in/2, scale*local_samples[i]); //vkladame akt. frekvenci a amplitudu
             //akt. frekvence okamzite amp;litudy odpovida nyquistovce
-
-        sta.nn_tot += 1;  //celkovy pocet zpracovanych vzorku
-        sta.nn_run += 1;
-
         if(wrks.v.size() == M) {
 
             t_slcircbuf::write(wrks); //zapisem novy jeden radek
             t_slcircbuf::read(&wrks); //a novy pracovni si hned vyctem
             wrks = t_rt_slice(sta.nn_run / *sta.fs_in, M); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
         }
+
+        sta.nn_tot += 1;  //celkovy pocet zpracovanych vzorku
+        sta.nn_run += 1;
     }
 
     t_slcircbuf::set(&wrks, 1);   //zapisem zpet i kdyz neni cely
@@ -151,9 +153,8 @@ void t_rt_snd_card::change(){
         return; //tak to neklaplo - takovy format nemame
     }
 
-    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
     sta.nn_run = 0;
-
+    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
     int N = set["Multibuffer"].get().toDouble();
     int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
 

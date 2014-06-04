@@ -87,9 +87,6 @@ void t_rt_player::process(){
             if(avaiable_l < t_amp.avail){ ; }  /*! \todo - !!nestihame prehravat --> zahazujem vzorky */
             else if(avaiable_l > t_amp.avail) avaiable_l = t_amp.avail;  //stihame; staci nam jen prostor na jeden radek
 
-            sta.nn_tot += 1;
-            sta.nn_run += 1;
-
             short local_samples[avaiable_l];  //vycteni dostupneho
             for(int i=0; i < avaiable_l; i++){  //konverze do shortu a zapis
 
@@ -101,6 +98,9 @@ void t_rt_player::process(){
                     t_slcircbuf::read(&wrks, 1);
                     wrks = t_rt_slice(sta.nn_tot / *sta.fs_in); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
                 }
+
+                sta.nn_tot += 1;
+                sta.nn_run += 1;
             }
 
             qint64 written_l = output_io->write((char *)local_samples, avaiable_l);
@@ -174,3 +174,5 @@ void t_rt_player::change(){
 
     emit on_change();
 }
+
+

@@ -54,6 +54,7 @@ int t_rt_base::attach(t_rt_base *next){
 void t_rt_base::start(){
 
     sta.state = t_rt_status::ActiveState;
+    sta.nn_run = 0;
 }
 
 void t_rt_base::pause(){
