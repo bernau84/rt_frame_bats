@@ -68,6 +68,8 @@ void t_rt_player::process(){
     if(!output_io || !output_audio)
         return;
 
+    int M = set["Time"].get().toDouble() / 1000.0 * sta.fs_out;
+
     t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
     if(!pre) return; //navazujem na zdroj dat?
 
@@ -85,22 +87,19 @@ void t_rt_player::process(){
             if(avaiable_l < t_amp.avail){ ; }  /*! \todo - !!nestihame prehravat --> zahazujem vzorky */
             else if(avaiable_l > t_amp.avail) avaiable_l = t_amp.avail;  //stihame; staci nam jen prostor na jeden radek
 
-            short local_samples[avaiable_l];  //vycteni dostupneho
+            sta.nn_tot += 1;
+            sta.nn_run += 1;
 
+            short local_samples[avaiable_l];  //vycteni dostupneho
             for(int i=0; i < avaiable_l; i++){  //konverze do shortu a zapis
 
-                local_samples[i] = t_amp.A[i] * scale;
-                if(wrks.avail < wrks.A.count()){
-
-                    wrks.f[wrks.avail] = nn_tot++ / *sta.fs_in; //vkladame cas kazdeho vzorku
-                    wrks.A[wrks.avail++] = t_amp.A[i];
-                } else {
+                local_samples[i] = t_amp.v[i].A * scale;
+                wrks.v << t_rt_slice::t_rt_tf(sta.fs_out/2, local_samples[i]); //vkladame cas kazdeho vzorku
+                if(wrks.v.size() == M){
 
                     t_slcircbuf::write(wrks); //zapisem novy jeden radek
-                    t_slcircbuf::readShift(1); //a novy pracovni si hned vyctem
-                    t_slcircbuf::get(&wrks, 1);
-                    wrks.avail = 0; //jdem od zacatku
-                    wrks.t = nn_tot / *sta.fs_in; //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
+                    t_slcircbuf::read(&wrks, 1);
+                    wrks = t_rt_slice(sta.nn_tot / *sta.fs_in); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
                 }
             }
 
@@ -162,17 +161,11 @@ void t_rt_player::change(){
     int N = set["Multibuffer"].get().toDouble();
     int M = set["Time"].get().toDouble() / 1000.0 * sta.fs_out;
 
-    t_slcircbuf::resize(M); //novy vnitrni multibuffer
+    t_slcircbuf::resize(M, true); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
-    t_rt_slice dfs;
-    dfs.A = QVector<double>(N, 0);
-    dfs.f = QVector<double>(N, 0);
-    dfs.avail = 0;
-    dfs.t = 0.0; //vse na 0
-
-    t_slcircbuf::init(dfs); //nastavime vse na stejno
-    t_slcircbuf::clear(); //vynulujem ridici promenne - zacnem jako po startu na inx 0
+    t_rt_slice dfs(0);
+    t_slcircbuf::set(&dfs, 1);
 
     int mmrt = set["__refresh_rate"].get().toDouble() * sta.fs_out * 1000;
     output_audio->setNotifyInterval(mmrt); //v ms

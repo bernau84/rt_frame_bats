@@ -32,6 +32,7 @@ t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
 
 void t_rt_snd_card::start(){
 
+    sta.nn_run = 0;
     if(input_audio)
         switch(input_audio->state()){
 
@@ -81,21 +82,22 @@ void t_rt_snd_card::process(){
     t_rt_slice wrks; //pracovni radek v multibufferu
     t_slcircbuf::get(&wrks, 1);  //vyctem
 
-    int N = set["Multibuffer"].get().toDouble();
+    int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
 
     double scale = 1.0 / (1 << (format.sampleSize()-1));  //mame to v signed
     for(int i=0; i<readable_l; i++){  //konverze do double a zapis
 
         wrks.v << t_rt_slice::t_rt_tf(*sta.fs_in/2, scale*local_samples[i]); //vkladame akt. frekvenci a amplitudu
             //akt. frekvence okamzite amp;litudy odpovida nyquistovce
-        nn_tot += 1;  //celkovy pocet zpracovanych vzorku
 
-        if(wrks.v.size() == N) {
+        sta.nn_tot += 1;  //celkovy pocet zpracovanych vzorku
+        sta.nn_run += 1;
+
+        if(wrks.v.size() == M) {
 
             t_slcircbuf::write(wrks); //zapisem novy jeden radek
-            t_slcircbuf::readShift(1); //a novy pracovni si hned vyctem
-            t_slcircbuf::get(&wrks, 1);
-            wrks = t_rt_slice(nn_tot / *sta.fs_in); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
+            t_slcircbuf::read(&wrks); //a novy pracovni si hned vyctem
+            wrks = t_rt_slice(sta.nn_run / *sta.fs_in, M); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
         }
     }
 
@@ -150,20 +152,16 @@ void t_rt_snd_card::change(){
     }
 
     sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
+    sta.nn_run = 0;
+
     int N = set["Multibuffer"].get().toDouble();
     int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
 
-    t_slcircbuf::resize(M); //novy vnitrni multibuffer
+    t_slcircbuf::resize(N, true); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
-    t_rt_slice dfs;
-    dfs.A = QVector<double>(N, 0);
-    dfs.f = QVector<double>(N, 0);
-    dfs.avail = 0;
-    dfs.t = 0.0; //vse na 0
-
-    t_slcircbuf::init(dfs); //nastavime vse na stejno
-    t_slcircbuf::clear(); //vynulujem ridici promenne - zacnem jako po startu na inx 0
+    t_rt_slice dfs(0, M);
+    t_slcircbuf::set(&dfs); //pripravime novy rez
 
     input_audio->setNotifyInterval(set["Refresh"].get().toDouble());  //navic mame to od byteready
     connect(input_audio, SIGNAL(notify()), SLOT(process()));

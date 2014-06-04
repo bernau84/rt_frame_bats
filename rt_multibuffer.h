@@ -4,6 +4,7 @@
 #include <QReadWriteLock>
 #include <QtDebug>
 
+/*! \todo - refactor to std library; but there is no way how to suplement QMutex or any lock v C03 standatd */
 
 #define NO_AVAIL_CHECK
 
@@ -15,6 +16,7 @@
 //primo potomek zamku - zamykame jak cteni tak zapis (cteni je dovoleno az po tom co uvolnen zapis,
 //vicero cteni nevadi, zapis take az co je docteno)
 //umoznujeme cteni z vicero zdroju - nezavisle read pointery
+
 template <typename T, int N> class t_multibuffer : public QReadWriteLock {
     private:
         int     size;
@@ -41,7 +43,7 @@ template <typename T, int N> class t_multibuffer : public QReadWriteLock {
         bool    isEmpty(int n = 0);
         bool    isOver(int n = 0);
 
-        bool    resize(int _size);
+        bool    resize(int _size, bool keep = true); //keep the previous values?
         void    clear(void);  //nulujem rd a ar indexy; prvky nemenime
         void    init(T df);  //nastavi hodnoty bufferu na konstantni hodnoty
 
@@ -147,30 +149,35 @@ template <typename T, int N> int t_multibuffer<T, N>::writeShift(int len){
 }
 
 //------------------------------------------------------------------------------
-template <typename T, int N> bool t_multibuffer<T, N>::resize(int _size){
+template <typename T, int N> bool t_multibuffer<T, N>::resize(int _size, bool keep){
 
     lockForWrite();
 
-    if(buf) delete[] buf;
-    size = _size;
+    T *bbuf = buf;  //backup
+    int bsize = size;
 
-    wmark = 0;
+    size = _size;
+    wmark = (!keep) ? 0 : wmark[i] % size;
     for(int i=0; i<N; i++){
 
-        overflow[i] = -1;
-        rmark[i] = 0;
+        overflow[i] = (!keep) ? -1 : overflow[i];
+        rmark[i] = (!keep) ? 0 : rmark[i] % size;  //will perfectly work for enlarging, tricky for shortening
     }
 
-    if(size)    //protoze on jse chopne priradit o nulovenu poli pointer!
+    if(size)    //bacause also zero length buffer can have pointer; we wan't this
         try {
 
             buf = (T *) new T[_size];
+            if(buf && keep)
+                for(int i=i; i<bsize; i++)
+                    buf[i] = bbuf[i % size];
         }
         catch (...) {
 
             qDebug() << "Multibuffer reallocation error";
         }
 
+    if(bbuf) delete[] bbuf;
     unlock();
 
     return(buf != (T *)0);

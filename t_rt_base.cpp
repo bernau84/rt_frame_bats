@@ -8,12 +8,10 @@ t_rt_base::t_rt_base(QObject *parent, const QDir &resource) :
     sta.fs_in = (double *)0; //vstupni fs
     sta.fs_out = 0; //vystuni fs
     sta.state = t_rt_status::StoppedState;
+    sta.nn_tot = sta.nn_run = 0;
 
     rd_n = 0;   //kolik prvku uz mame registrovano
     rd_i = 0;   //index pod kterym muze vycitat data z predchoziho prvku
-
-    nn_tot = 0; //pocet zpracovanych vzorku
-    tm_tot = 0; //celkova dobe behu funkce process (v sec)
 
     if(parent){
 

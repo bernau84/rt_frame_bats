@@ -34,6 +34,8 @@ class t_rt_status {
 public:
     double  *fs_in; //vzorkovaci frekvence vstupu - ukazuje na fs_out predchazejiciho prvku
     double  fs_out; //vzorkovaci frekvence vystupu
+    quint64 nn_tot; //pocet zpracovanych vzorku (na vstupu) - neresetujem
+    quint64 nn_run; //pocet zpracovanych vzorku (na vstupu) - doba behu
 
     enum t_rt_a_sta {
         ActiveState = 1,
@@ -59,9 +61,6 @@ private:
 protected:
     int rd_n;   //pocet registrovanych prvku pro cteni
     int rd_i;   //cteci index v multibufferu predcoziho prvku
-
-    long long int nn_tot; //pocet zpracovanych vzorku
-    double  tm_tot; //celkova dobe behu funkce process (v sec)
 
 public:
     t_collection set;
