@@ -83,7 +83,7 @@ void rt_graphics::process()
     m_context->makeCurrent(this);
     m_device->setSize(size());
 
-    {
+    if(demo == 1){
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -116,8 +116,8 @@ void rt_graphics::process()
             glVertexAttribPointer(m_posAttr, 2, GL_FLOAT, GL_FALSE, 0, vertices);
             glVertexAttribPointer(m_colAttr, 3, GL_FLOAT, GL_FALSE, 0, colors);
 
-            glEnableVertexAttribArray(0);
-            glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(m_colAttr);
+            glEnableVertexAttribArray(m_posAttr);
 
             glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -127,6 +127,17 @@ void rt_graphics::process()
             m_program->release();
 
             ++m_frame;
+    } else if(demo == 2){
+
+            GLuint N = set["Multibuffer"].get().toDouble();
+            GLuint vbo[N];
+            glGenBuffers(N, vbo);
+
+            for(int n=0; n<N; n++){
+
+                glBindBuffer(GL_ARRAY_BUFFER, vbo[n]);
+                glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
+            }
     }
 
     m_context->swapBuffers(this);

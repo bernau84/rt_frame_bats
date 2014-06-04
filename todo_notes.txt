@@ -29,4 +29,5 @@ NOTES
 ?! inheritance operatoru? asi ano ale co to jako dela?
 ? vicevstupy nod
 ! uzivatelska nastaveni odehravat pres predka t_collection (nomalne import a export pres QJsonDocument!)
-
+! obecny prvek jako multibuffer s double neni uplne pekny...multibuffer je sablona a leobecny predek uz by byt nemusel
+    potrebuji ho

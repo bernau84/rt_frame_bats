@@ -90,8 +90,9 @@ void t_rt_snd_card::process(){
     double scale = 1.0 / (1 << (format.sampleSize()-1));  //mame to v signed
     for(int i=0; i<readable_l; i++){  //konverze do double a zapis
 
-        wrks.v << t_rt_slice::t_rt_tf(*sta.fs_in/2, scale*local_samples[i]); //vkladame akt. frekvenci a amplitudu
-            //akt. frekvence okamzite amp;litudy odpovida nyquistovce
+        double f = wrks.v.size() / *sta.fs_in;      //kvuli grafu vkladame cas vzorku; jinak bysme davali fr rozliseni == nyquistovu frekvenci
+        wrks.v << t_rt_slice::t_rt_tf(f , scale*local_samples[i]); //vkladame akt. frekvenci a amplitudu
+            //akt. frekvence okamzite amplitudy odpovida nyquistovce
         if(wrks.v.size() == M) {
 
             t_slcircbuf::write(wrks); //zapisem novy jeden radek
