@@ -40,7 +40,8 @@ OTHER_FILES += \
     js_config_sndsink.txt \
     garbage.txt \
     js_config_cpbanalysis.txt \
-    js_config_freqshift.txt
+    js_config_freqshift.txt \
+    js_config_plotgraph.txt
 
 RESOURCES += \
     rt_res_defaults.qrc

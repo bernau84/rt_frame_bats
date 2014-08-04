@@ -6,20 +6,20 @@
         "med(50)": 50,
         "long(70)": 70,
         "wide(100)": 100,
-        "def": 30,
-        "min": 1
+        "__def": 30,
+        "__min": 1
     },
     "Bands": {
         "__info": "frequency resoluton - haw many overal bands",
         "10": 10,
         "20": 20,
-        "def": 10,
-        "min": 10,
-        "max": 20
+        "__def": 10,
+        "__min": 10,
+        "__max": 20
     },
     "Select": {
         "__info": "multiselect between subbands for additive output",
-        "def": [2,3]
+        "__def": [2,3]
     },
     "__bandpass_directfir": {
         "__info": "decimator fir coefs",

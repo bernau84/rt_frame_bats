@@ -13,23 +13,67 @@ class QPainter;
 class QOpenGLContext;
 class QOpenGLPaintDevice;
 
-class rt_graphics : public t_rt_output, protected QOpenGLFunctions
-{
-    Q_OBJECT
+
+enum t_rt_graph_object_item {
+
+    RT_GR_OBJ_VERTEXBUF = 0,    /*!< 0 - vertex buffer */
+    RT_GR_OBJ_TIMESL,       /*!< 1 - vertical slices indexes */
+    RT_GR_OBJ_FREQSL,       /*!< 2 - horizontal slices */
+    RT_GR_OBJ_TRISURF,      /*!< 3 - surface triangulation */
+    RT_GR_OBJ_AXES,       /*!< 4 - axis and fractions */
+    RT_GR_OBJ_LABELS,       /*!< 5 - axis and fractions */
+    RT_GR_OBJ_GRAD,       /*!< 6 - color gradient sub */
+    RT_GR_OBJ_NUMBER
+};
+
+
+class rt_window : public QWindow, protected QOpenGLFunctions {
 
 private:
-    QWindow *m_win;
     QOpenGLContext *m_context;
     QOpenGLPaintDevice *m_device;
+    QOpenGLShaderProgram *m_program;
+
+    QMatrix4x4 m_matrix;  //perspective matrix
+    QPoint  m_fp;  //coord mouse press down
 
     GLuint m_posAttr;
     GLuint m_colAttr;
     GLuint m_matrixUniform;
 
-    QOpenGLShaderProgram *m_program;
-    int m_frame;
+    virtual void	mouseMoveEvent(QMouseEvent *ev);
+    virtual void	mousePressEvent(QMouseEvent *ev);
+    virtual void	mouseReleaseEvent(QMouseEvent *ev);
 
-private slots:
+public:
+
+    void render(GLuint vbo[], int n);
+
+    QMatrix4x4  getMatrix(){ //for usage in render function
+
+        return m_matrix;
+    }
+
+    rt_window(QObject *parent);
+    ~rt_window(){
+
+        if(m_device)
+            delete m_device;
+    }
+};
+
+
+class rt_graphics : public t_rt_output
+{
+    Q_OBJECT
+
+private:
+
+    rt_window *m_winGraph;
+    GLuint m_bufObject[RT_GR_OBJ_NUMBER];
+
+private:
+    void render();  //redraw scene
 
 public slots:
     void start();
@@ -38,7 +82,13 @@ public slots:
     void change();
 
 public:
-    rt_graphics(QObject *parent = 0);
+
+    rt_graphics(QObject *parent = 0):
+        m_winGraph(new rt_window(parent)){
+
+        glGenBuffers(RT_GR_OBJ_NUMBER, m_bufObject);   // Create vertex buffer objects
+        change();
+    }
 };
 
 
