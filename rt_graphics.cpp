@@ -6,7 +6,7 @@
 #include <QtGui/QOpenGLPaintDevice>
 #include <QtGui/QPainter>
 
-#define DEMO 1
+//#define DEMO 1
 
 static const char *vertexShaderSource =
     "attribute highp vec4 posAttr;\n"
@@ -61,29 +61,50 @@ rt_window::rt_window(QObject *parent):
     m_fp = QPoint();
 }
 
-void rt_graphics::mouseMoveEvent(QMouseEvent *ev){
+/*! brief Rotate scene in direction of mouse movement
+ * in angle corresponding to speed of move */
+void rt_window::mouseMoveEvent(QMouseEvent *ev){
 
     if(m_fp.isNull() == true)
         return;
 
     QPoint p = ev->pos() - m_fp;
     m_matrix.rotate(360 * p.manhattanLength() / width(), 0, p.y()/height(), p.x()/height());
-}
-
-void rt_graphics::mousePressEvent(QMouseEvent *ev){
 
     m_fp = ev->pos();
 }
 
-void rt_graphics::mouseReleaseEvent(QMouseEvent *ev){
+void rt_window::mousePressEvent(QMouseEvent *ev){
+
+    m_fp = ev->pos();
+}
+
+void rt_window::mouseReleaseEvent(QMouseEvent *ev){
 
     m_fp = QPoint();
+}
+
+bool rt_window::event(QEvent *event){
+
+    switch (event->type()) {
+    case QEvent::UpdateRequest:
+        render();
+        return true;
+    default:
+        return QWindow::event(event);
+    }
 }
 
 void rt_window::render(GLuint vbo[], int n){
 
     if(!win->isExposed())
         return;
+
+    memcpy(m_vbo, vbo, n);
+    render();
+}
+
+void rt_window::render(){
 
     m_context->makeCurrent(this);
     m_device->setSize(size());
@@ -115,7 +136,7 @@ void rt_window::render(GLuint vbo[], int n){
         glDisableVertexAttribArray(m_colAttr);
     }
 
-    if(0 == vbo[RT_GR_OBJ_TIMESL]){
+    if(0 == vbo[RT_GR_OBJ_FREQSL]){
 
         glVertexAttribPointer(m_colAttr, 3, GL_FLOAT, GL_FALSE, 3*3*4, BUFFER_OFFSET(24));
         glEnableVertexAttribArray(m_colAttr);
@@ -145,28 +166,111 @@ void rt_window::render(GLuint vbo[], int n){
 
 
 
-void rt_graphics::timerEvent(QTimerEvent *event){
-
-    Q_UNUSED(event);
-    render(m_bufObject, RT_GR_OBJ_NUMBER);
-}
-
-
-rt_graphics::~rt_graphics()
-{
-}
-
 void rt_graphics::change()
 {
-    this->startTimer(set["Refresh"].get().toDouble());
-}
+    QJsonValue ts = set["Type"].get();
+    if(ts.isArray()) m_selected = ts.toArray();  //vyber multigraph
+    else if(ts.isDouble()) m_selected.append(ts.toDouble());  //one selection
 
+    M = N = 0;
+    t_slcircbuf *l_mb = dynamic_cast<t_slcircbuf *>(parent());  //local ptr
+    for(t_rt_slice l1_amp, l2_amp; l1_amp.t <= l2_amp.t; l_mb->get(&l1_amp, rd_i)){
+
+        l2_amp.t = l1_amp.t;
+        l_mb->readShift(rd_i);
+        if(M < l2_amp.v.size()) M = l2_amp.v.size();
+        N += 1;
+    }
+
+    int s_size = 0, l_size = M*N*sizeof(GLfloat);  //number of points
+    RT_GR_OBJ_VERTEXBUF = 0,    /*!< 0 - vertex buffer */
+    RT_GR_OBJ_TIMESL,       /*!< 1 - vertical slices indexes */
+    RT_GR_OBJ_FREQSL,       /*!< 2 - horizontal slices */
+    RT_GR_OBJ_TRISURF,      /*!< 3 - surface triangulation */
+    RT_GR_OBJ_AXES,       /*!< 4 - axis and fractions */
+    RT_GR_OBJ_LABELS,       /*!< 5 - axis and fractions */
+    RT_GR_OBJ_GRAD,       /*!< 6 - color gradient sub */
+    RT_GR_OBJ_NUMBER
+    if(m_selected.contains(RT_GR_OBJ_VERTEXBUF)){
+
+       s_size += l_size * 3; //3 axes
+       s_size += l_size * 3;    //2 colors per pixel
+    }
+    if(m_selected.contains(RT_GR_OBJ_TIMESL)){
+
+       s_size += l_size * 3; //for line color
+    }
+    m_bufRaw = realloc(m_bufRaw, M*N*sizeof(GLfloat));
+}
 
 
 void rt_graphics::process()
 {
 #ifndef DEMO
-    int N = set["Multibuffer"].get().toDouble();
+
+    /*! \todo - if and only if the time from last refresh exceed the
+     * selected refresh rate
+     * this->startTimer(set["Refresh"].get().toDouble());
+     */
+
+    t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
+    if(!pre) return; //navazujem na zdroj dat?
+
+    if(sta.state != t_rt_status::ActiveState){
+
+        int n_dummy = pre->t_slcircbuf::readSpace(rd_i); //zahodime data
+        pre->t_slcircbuf::readShift(n_dummy, rd_i);
+        return;  //bezime?
+    }
+
+
+
+    //zjistiti pocet prvku a rezervovat odpovidajici pamet (3x souradnice, 3x barva)
+    //!pozor nemusi jit o matici
+    //      - to by pak mohl byt ale problem s plochou; asi bysme meli body patricne zmnozit
+    //      - nebo jeste lepe znulovat (a nastavit patricne blbou barvu)
+    //pokud je zadane vygenerovat indexy k x rezum
+    //pokud je zadane vygenerovat indexy k y rezum (podle aktualniho poctu prvku ovsem)
+    //velke todo - automaticke prizpusobeni delky os a popisky
+
+    t_rt_slice p_slice;   //radek soucasneho spektra
+    t_slcircbuf::get(&p_slice, 1);  //vyctem aktualni rez
+
+    t_rt_slice t_amp;  //radek caovych dat
+    while(pre->t_slcircbuf::read(&t_amp, rd_i)){ //vyctem radek
+
+        for(int i=0; i<t_amp.v.size(); i++){
+
+            int dd, m  = (sta.nn_run % D);
+            double t_filt = bank[m]->Process(t_amp.v[i].A, &dd);  //band pass & decimace
+
+            sta.nn_run += 1;
+            sta.nn_tot += 1;
+
+            if((dd == 0) && (mask & (1 << m))){ //z filtru vypadl decimovany vzorek ktery chcem
+
+                if(m & 0x1) //mirroring u lichych pasem
+                    t_filt *= -1;
+
+                p_shift.v.last().A += t_filt;  //scitame s prispevky od jinych filtru (pokud jsou vybrany)
+                p_shift.v.last().f  = mask;
+            }
+
+            if(m == (D-1)){  //mame hotovo (decimace D) vzorek muze jit ven
+
+                p_shift.v = t_rt_slice::t_rt_tf(sta.nn_tot / *sta.fs_in); //pripravim novy
+
+                if((p_shift.v.size()) == R) {
+
+                    t_slcircbuf::write(p_shift); //zapisem novy jeden radek
+                    t_slcircbuf::read(&p_shift, 1);
+                    p_shift = t_rt_slice(0, 1); //inicializace noveho spektra
+                }
+            }
+        }
+    }
+
+    t_slcircbuf::set(&p_shift, 1);  //vratime aktualni cpb spektrum
 #endif //DEMO
 
 #if DEMO

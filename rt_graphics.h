@@ -40,22 +40,22 @@ private:
     GLuint m_posAttr;
     GLuint m_colAttr;
     GLuint m_matrixUniform;
+    GLuint m_vbo[RT_GR_OBJ_NUMBER];
 
-    virtual void	mouseMoveEvent(QMouseEvent *ev);
-    virtual void	mousePressEvent(QMouseEvent *ev);
-    virtual void	mouseReleaseEvent(QMouseEvent *ev);
+    virtual void mouseMoveEvent(QMouseEvent *ev);
+    virtual void mousePressEvent(QMouseEvent *ev);
+    virtual void mouseReleaseEvent(QMouseEvent *ev);
+    virtual bool event(QEvent *event);
+
+private:
+    void render();
 
 public:
 
     void render(GLuint vbo[], int n);
 
-    QMatrix4x4  getMatrix(){ //for usage in render function
-
-        return m_matrix;
-    }
-
     rt_window(QObject *parent);
-    ~rt_window(){
+    virtual ~rt_window(){
 
         if(m_device)
             delete m_device;
@@ -63,17 +63,18 @@ public:
 };
 
 
-class rt_graphics : public t_rt_output
+class rt_graphics : public t_rt_base
 {
     Q_OBJECT
 
 private:
+    int M;
+    int N;
+    QJsonArray m_selected;
 
     rt_window *m_winGraph;
+    void *m_bufRaw;
     GLuint m_bufObject[RT_GR_OBJ_NUMBER];
-
-private:
-    void render();  //redraw scene
 
 public slots:
     void start();
@@ -83,11 +84,20 @@ public slots:
 
 public:
 
-    rt_graphics(QObject *parent = 0):
-        m_winGraph(new rt_window(parent)){
+    explicit rt_graphics(QObject *parent = 0, const QDir &resource = QDir()):
+        t_rt_base(parent, resource),
+        m_winGraph(new rt_window(parent)),
+        m_bufRaw(NULL)
+    {
 
         glGenBuffers(RT_GR_OBJ_NUMBER, m_bufObject);   // Create vertex buffer objects
         change();
+    }
+
+    virtual ~rt_graphics(){
+
+        glDeleteBuffers(RT_GR_OBJ_NUMBER, m_bufObject);
+        if(m_bufRaw) free(m_bufRaw);
     }
 };
 
