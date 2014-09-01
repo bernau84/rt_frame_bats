@@ -46,6 +46,7 @@ template <typename T, int N> class t_multibuffer : public QReadWriteLock {
         bool    resize(int _size, bool keep = true); //keep the previous values?
         void    clear(void);  //nulujem rd a ar indexy; prvky nemenime
         void    init(T df);  //nastavi hodnoty bufferu na konstantni hodnoty
+        int     size(){ return size; }  //
 
         t_multibuffer(int _size);
         ~t_multibuffer();
