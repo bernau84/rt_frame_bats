@@ -13,32 +13,30 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp\
-	freq_analysis.cpp\
-	rt_analysis.cpp\
-	rt_sources.cpp\
-        t_rt_base.cpp \
-    rt_output.cpp \
-    rt_graphics.cpp
+	analysis\freq_analysis.cpp\
+	analysis\rt_analysis.cpp\
+	sources\rt_sources.cpp\
+        base\t_rt_base.cpp \
+    outputs\rt_output.cpp \
+    graphs\rt_graphics.cpp
 
 HEADERS  += mainwindow.h\
 	freq_analysis.h\
-	rt_analysis.h\
-	rt_sources.h\
-	t_rt_base.h\
-	t_rw_buffer.h\
-	rt_basictypes.h \
-    rt_multibuffer.h \
-    rt_output.h \
-    freq_rt_filtering.h \
-    rt_graphics.h
+	analysis\rt_analysis.h\
+	sources\rt_sources.h\
+	base\t_rt_base.h\
+	base\t_rw_buffer.h\
+	base\rt_basictypes.h \
+    base\rt_multibuffer.h \
+    outputs\rt_output.h \
+    analysis\freq_rt_filtering.h \
+    graphs\rt_graphics.h
 
 FORMS    += mainwindow.ui
 
 OTHER_FILES += \
-    todo_notes.txt \
     js_config_sndsource.txt \
     js_config_sndsink.txt \
-    garbage.txt \
     js_config_cpbanalysis.txt \
     js_config_freqshift.txt \
     js_config_plotgraph.txt
