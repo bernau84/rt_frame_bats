@@ -13,24 +13,34 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp\
-	analysis\freq_analysis.cpp\
-	analysis\rt_analysis.cpp\
-	sources\rt_sources.cpp\
-        base\t_rt_base.cpp \
-    outputs\rt_output.cpp \
-    graphs\rt_graphics.cpp
+        analysis/freq_analysis.cpp\
+        analysis/rt_analysis.cpp\
+        sources/rt_sources.cpp\
+        baset_rt_base.cpp \
+    outputs/rt_output.cpp \
+    graphs/rt_graphics.cpp \
+    graphs/rt_base_graph.cpp \
+    graphs/rt_graphs_units.cpp \
+    graphs/rt_window.cpp \
+    graphs/rt_graph_scaler.cpp \
+    graphs/rt_axe.cpp
 
 HEADERS  += mainwindow.h\
 	freq_analysis.h\
-	analysis\rt_analysis.h\
-	sources\rt_sources.h\
-	base\t_rt_base.h\
-	base\t_rw_buffer.h\
-	base\rt_basictypes.h \
-    base\rt_multibuffer.h \
-    outputs\rt_output.h \
-    analysis\freq_rt_filtering.h \
-    graphs\rt_graphics.h
+        analysis/rt_analysis.h\
+        sources/rt_sources.h\
+        base/t_rt_base.h\
+        base/t_rw_buffer.h\
+        base/rt_basictypes.h \
+    base/rt_multibuffer.h \
+    outputs/rt_output.h \
+    analysis/freq_rt_filtering.h \
+    graphs/rt_graphics.h \
+    graphs/rt_window.h \
+    graphs/rt_graph_units.h \
+    graphs/rt_graph_scaler.h \
+    graphs/rt_axe.h \
+    graphs/rt_graph_axis.h
 
 FORMS    += mainwindow.ui
 
