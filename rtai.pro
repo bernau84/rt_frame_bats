@@ -23,7 +23,10 @@ SOURCES += main.cpp\
     graphs/rt_graphs_units.cpp \
     graphs/rt_window.cpp \
     graphs/rt_graph_scaler.cpp \
-    graphs/rt_axe.cpp
+    graphs/rt_graph_context.cpp \
+    graphs/rt_graph_memory.cpp \
+    graphs/rt_graph_colormap.cpp \
+    graphs/rt_graph_object.cpp
 
 HEADERS  += mainwindow.h\
 	freq_analysis.h\
@@ -35,12 +38,15 @@ HEADERS  += mainwindow.h\
     base/rt_multibuffer.h \
     outputs/rt_output.h \
     analysis/freq_rt_filtering.h \
-    graphs/rt_graphics.h \
-    graphs/rt_window.h \
     graphs/rt_graph_units.h \
     graphs/rt_graph_scaler.h \
-    graphs/rt_axe.h \
-    graphs/rt_graph_axis.h
+    graphs/rt_graph_axis.h \
+    graphs/rt_graph_colormap.h \
+    graphs/rt_graph.h \
+    graphs/rt_ogl_frame.h \
+    graphs/rt_ogl_context.h \
+    graphs/rt_ogl_memory.h \
+    graphs/rt_ogl_object.h
 
 FORMS    += mainwindow.ui
 
