@@ -37,7 +37,7 @@ enum e_rt_graph_object_item {
  * factory patter & smart graph object and vbo sharing
  */
 
-class rt_graph_frame {
+class rt_graph_frame : public QOpenGLFramebufferObject {
 
 private:
     rt_graph_context *m_context;  //ogl context + qwindow
@@ -293,9 +293,11 @@ public:
         for(quint oi = 0; oi < RT_OBJ_NUMBER; oi += 1)
             if(m_rto[oi]){
 
-                delete m_rto[oi];
+                del(m_rto[oi]);
                 m_rto[oi] = NULL;
             }
+
+        m_context->glDeleteBuffers(RT_VBO_NUMBER, m_vbo);
     }
 };
 

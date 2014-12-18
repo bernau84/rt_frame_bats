@@ -26,7 +26,9 @@ SOURCES += main.cpp\
     graphs/rt_graph_context.cpp \
     graphs/rt_graph_memory.cpp \
     graphs/rt_graph_colormap.cpp \
-    graphs/rt_graph_object.cpp
+    graphs/rt_graph_object.cpp \
+    base/t_rt_base.cpp \
+    inputs/rt_sources.cpp
 
 HEADERS  += mainwindow.h\
 	freq_analysis.h\
@@ -46,7 +48,8 @@ HEADERS  += mainwindow.h\
     graphs/rt_ogl_frame.h \
     graphs/rt_ogl_context.h \
     graphs/rt_ogl_memory.h \
-    graphs/rt_ogl_object.h
+    graphs/rt_ogl_object.h \
+    inputs/rt_sources.h
 
 FORMS    += mainwindow.ui
 
