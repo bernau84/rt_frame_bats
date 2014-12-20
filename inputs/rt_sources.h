@@ -6,14 +6,14 @@
 #include <QAudioFormat>
 #include <QAudioInput>
 
-class t_rt_sources : public t_rt_base<double> //, public QThread
+class t_rt_source : public t_rt_base<double> //, public QThread
 {
     Q_OBJECT
 public:
-    t_rt_sources(QObject *parent, const QDir &resource = QDir());
+    t_rt_source(QObject *parent, const QDir &resource = QDir());
 };
 
-class t_rt_snd_card : public t_rt_sources
+class t_rt_snd_card : public t_rt_source
 {
     Q_OBJECT
 private:

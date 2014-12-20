@@ -2,7 +2,7 @@
 #include "rt_basictypes.h"
 #include <QtDebug>
 
-t_rt_sources::t_rt_sources(QObject *parent, const QDir &resource):
+t_rt_source::t_rt_source(QObject *parent, const QDir &resource):
     t_rt_base(parent, resource)
 {
 }
@@ -10,7 +10,7 @@ t_rt_sources::t_rt_sources(QObject *parent, const QDir &resource):
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
-    t_rt_sources(parent, QDir(":/config/js_config_sndsource.txt")), input_dev(in)
+    t_rt_source(parent, QDir(":/config/js_config_sndsource.txt")), input_dev(in)
 {
     QJsonArray jfrl;  //conversion
     QList<int> qfrl = in.supportedSampleRates();
@@ -82,29 +82,26 @@ void t_rt_snd_card::process(){
     qint64 readable_l = input_io->read((char *)local_samples, avaiable_l);
     if(!readable_l) return;
 
-    t_rt_slice wrks; //pracovni radek v multibufferu
-    t_slcircbuf::get(&wrks, 1);  //vyctem
+    t_rt_slice<double> w; //pracovni radek v multibufferu
+    t_slcircbuf::get(&w, 1);  //vyctem
 
     int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
-
+    double frres = 2 / *sta.fs_in; //fr rozliseni == nyquistovu frekvenci
     double scale = 1.0 / (1 << (format.sampleSize()-1));  //mame to v signed
+
     for(int i=0; i<readable_l; i++){  //konverze do double a zapis
 
-        double f = wrks.v.size() / *sta.fs_in;      //kvuli grafu vkladame cas vzorku; jinak bysme davali fr rozliseni == nyquistovu frekvenci
-        wrks.v << t_rt_slice::t_rt_tf(f , scale*local_samples[i]); //vkladame akt. frekvenci a amplitudu
-            //akt. frekvence okamzite amplitudy odpovida nyquistovce
-        if(wrks.v.size() == M) {
+        if(w.isempty())  //predpoklad konstantnich t inkrementu; vkladame cas 1. ho vzorku
+            w = t_rt_slice<double>(sta.nn_run / *sta.fs_in, M);
 
-            t_slcircbuf::write(wrks); //zapisem novy jeden radek
-            t_slcircbuf::read(&wrks); //a novy pracovni si hned vyctem
-            wrks = t_rt_slice(sta.nn_run / *sta.fs_in, M); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
-        }
+        if(0 == w.append(t_rt_slice::t_rt_ai(frres, scale*local_samples[i])))  //slice is full
+            t_slcircbuf::write(w); //zapisem novy jeden radek
 
-        sta.nn_tot += 1;  //celkovy pocet zpracovanych vzorku
-        sta.nn_run += 1;
+        sta.nn_tot += 1;  //celkovy pocet zpracovanych vzorku od zmeny
+        sta.nn_run += 1;   //total - jen inkrementujem, kvuli statistice
     }
 
-    t_slcircbuf::set(&wrks, 1);   //zapisem zpet i kdyz neni cely
+    t_slcircbuf::set(&w, 1);   //zapisem zpet i kdyz neni cely
     emit on_update(); //dame vedet dal
 }
 
@@ -162,8 +159,8 @@ void t_rt_snd_card::change(){
     t_slcircbuf::resize(N, true); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
-    t_rt_slice dfs(0, M);
-    t_slcircbuf::set(&dfs); //pripravime novy rez
+    t_rt_slice dfs(0, 0);
+    t_slcircbuf::set(&dfs); //vymazem akt. slice aby se mohl s novymi daty inicializovat
 
     input_audio->setNotifyInterval(set["Refresh"].get().toDouble());  //navic mame to od byteready
     connect(input_audio, SIGNAL(notify()), SLOT(process()));

@@ -10,14 +10,7 @@ t_rt_empty::t_rt_empty(QObject *parent, const QDir &resource) :
     sta.nn_tot = sta.nn_run = 0;
 
     rd_n = 0;   //kolik prvku uz mame registrovano
-    rd_i = 0;   //index pod kterym muze vycitat data z predchoziho prvku
-
-//    if(parent){
-
-//        t_rt_base *pre = dynamic_cast<t_rt_base *>(parent);
-//        if(!pre) return; //navazujem na kompatibilni prvek? to do test!
-//        rd_i = pre->attach(this);    //nastavi sta.fs_in a rd_I
-//    }
+    rd_i = -1;   //index pod kterym muze vycitat data z predchoziho prvku
 }
 
 QJsonObject t_rt_base::__set_from_file(const QString path){
@@ -38,45 +31,15 @@ QJsonObject t_rt_base::__set_from_file(const QString path){
 
 int t_rt_base::attach(t_rt_base *next){
 
-    if(rd_n >= RT_MAX_READERS) return 0; //zadnej dalsi prvek uz pripojit nemuzeme
+    if(rd_n >= RT_MAX_READERS) return -1; //zadnej dalsi prvek uz pripojit nemuzeme
 
     connect(this, SIGNAL(on_change()), next, SLOT(change()));  //reakce na zmeny nastaveni, chyby, zmeny rezimu
     connect(this, SIGNAL(on_update()), next, SLOT(process())); //reakce na nova data
 
-    rd_n += 1;  //dalsi pijavice
     t_slcircbuf::readShift(t_slcircbuf::readSpace(rd_n), rd_n); //reset rd_cntr tak aby byl pripraven
-
     next->sta.fs_in = &sta.fs_out; //napojim info o vzorkovacich frekv.
-    return rd_n;
-}
-
-void t_rt_base::process(){
-
-    t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
-    if(!pre) return; //navazujem na zdroj dat?
-
-    if(sta.state != t_rt_status::ActiveState){
-
-        int n_dummy = pre->t_slcircbuf::readSpace(rd_i); //zahodime data
-        pre->t_slcircbuf::readShift(n_dummy, rd_i);
-        return;  //bezime?
-    }
-
-    t_rt_slice t_amp;  //radek caovych dat
-    while(pre->t_slcircbuf::read(&t_amp, rd_i)) //vyctem radek
-        process(t_amp);
-
+    return rd_n++;  //dalsi pijavice
 }
 
 
-void t_rt_base::start(){
-
-    sta.state = t_rt_status::ActiveState;
-    sta.nn_run = 0;
-}
-
-void t_rt_base::pause(){
-
-    sta.state = t_rt_status::SuspendedState;
-}
 
