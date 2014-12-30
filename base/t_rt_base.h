@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTime>
 #include <QDir>
+#include <QReadWriteLock>
 #include "rt_multibuffer.h"
 #include "rt_basictypes.h"
 
@@ -32,7 +33,7 @@ public:
 #define RT_MAX_READERS   6
 
 /*! \brief - implement interconnection and status logic
- * as well as support for jason configuration */
+ * as well as support for json configuration */
 class t_rt_empty : public QObject
 {
     Q_OBJECT
@@ -103,7 +104,7 @@ public slots:
 template <class T> class t_rt_slice {
 
 private:
-    int iwrite;  //last write index
+    int irecent;  //last write index - -1 unitialized, 0 - first valid
 
 public:
 
@@ -121,9 +122,8 @@ public:
     /*! \brief - test */
     bool isempty(){
 
-       return (iwrite < A.size()) ? true : false;
+       return (irecent < A.size()) ? true : false;
     }
-
     /*! \brief - reading from index */
     const t_rt_ai read(int i){
 
@@ -132,30 +132,30 @@ public:
        return v;
     }
     /*! \brief - read last written */
-    const t_rt_ai get(){
+    const t_rt_ai last(){
 
-       if(iwrite < 0) iwrite = 0;  //special case - not inited
-       int i = iwrite % N; //prevent overrange index
+       if(irecent < 0) irecent = 0;  //special case - not inited
+       int i = irecent % N; //prevent overrange index
        t_rt_ai v = { A[i], I[i] };
        return v;
     }
     /*! \brief - set last written */
     void set(const t_rt_ai &v){
 
-        if(iwrite < 0) iwrite = 0; //special case - not inited
-        A[iwrite] = v.A;
-        I[iwrite] = v.I;
+        if(irecent < 0) irecent = 0; //special case - not inited
+        A[irecent] = v.A;
+        I[irecent] = v.I;
     }
     /*! \brief - writing, returns number of remaining positions */
     int append(const t_rt_ai &v){
 
-       if(++iwrite < A.size()){
+       if(++irecent < A.size()){
 
-           A[iwrite] = v.A;
-           I[iwrite] = v.I;
+           A[irecent] = v.A;
+           I[irecent] = v.I;
        }
 
-       return (A.size() - iwrite);
+       return (A.size() - irecent);
     }
 
     t_rt_slice &operator= (const t_rt_slice &d){
@@ -163,30 +163,72 @@ public:
         A = QVector<T>(d.A);
         I = QVector<T>(d.I);
         t = d.t;
-        iwrite = -1;
+        irecent = -1;
     }
 
     t_rt_slice(const t_rt_slice &d):
-        A(d.A), I(d.I), t(d.t), iwrite(-1){;}
+        A(d.A), I(d.I), t(d.t), irecent(-1){;}
 
     t_rt_slice(T time = T(), int N = 0, T def = T()):
-        A(N, def), I(N), t(time), iwrite(-1){;}
+        A(N, def), I(N), t(time), irecent(-1){;}
 };
 
+
+class rt_qt_lock {
+
+private:
+
+    QReadWriteLock lock;
+    virtual void lockRead(){ lock.lockForRead(); }
+    virtual void lockWrite(){ lock.lockForWrite(); }
+    virtual void unlock(){ lock.unlock(); }
+
+    rt_qt_lock():lock(QReadWriteLock::NonRecursive){;}
+    ~rt_qt_lock(){;}
+};
 
 /*! \brief - encapsulation for multibuffer fixed number of readers
 typedef is unusable in this case
 */
 template <typename T> class t_slcircbuf : public t_multibuffer<T, RT_MAX_READERS>{
 
+private:
+    rt_qt_lock lock;
+
+public:
+
+    /*! \brief resize & reset */
+    void resize(int _size){
+
+        //keeping data is not possible cause possition of rd/wr
+        //pointers is unpredictible
+        if(buf)
+            delete[] buf;
+
+        buf = new T[size = _size];
+
+        wmark = 0;
+        for(int i=0; i<N; i++){
+
+            overflow[i] = -1;
+            rmark[i] = 0;
+        }
+    }
+
+    t_slcircbuf(int _size):
+        lock(),
+        t_multibuffer<T, RT_MAX_READERS>(_size, &lock){
+
+    }
+
+    virtual ~t_slcircbuf(){
+
+    }
 };
 
-/*! \brief - general precesor for all block proceeding data (inherits the circularbuffer)
-\todo - consider base to be build on unspecific multibuffer
-    it will allows connect items with different types together (floating analytics with integer graph
-    for example)
-*/
-
+/*! \brief - general precesor for all block proceeding data
+ *  (must inherits the circularbuffer as data interface)
+ */
 template <typename T> class t_rt_base : public t_rt_empty, t_slcircbuf<T>
 {
     Q_OBJECT
@@ -196,6 +238,8 @@ public:
         t_rt_empty(parent, resource){
 
     }
+
+    virtual ~t_rt_base(){;}
 
 public slots:
     virtual void process() = 0;

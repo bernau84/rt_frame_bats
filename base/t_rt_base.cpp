@@ -9,7 +9,7 @@ t_rt_empty::t_rt_empty(QObject *parent, const QDir &resource) :
     sta.state = t_rt_status::StoppedState;
     sta.nn_tot = sta.nn_run = 0;
 
-    rd_n = 0;   //kolik prvku uz mame registrovano
+    rd_n = 1;   //kolik prvku uz mame registrovano - index 0. vyhrazen pro tento prvek (vyzaduje to management - musime cist co jsem zapsali)
     rd_i = -1;   //index pod kterym muze vycitat data z predchoziho prvku
 }
 
@@ -36,10 +36,8 @@ int t_rt_base::attach(t_rt_base *next){
     connect(this, SIGNAL(on_change()), next, SLOT(change()));  //reakce na zmeny nastaveni, chyby, zmeny rezimu
     connect(this, SIGNAL(on_update()), next, SLOT(process())); //reakce na nova data
 
-    t_slcircbuf::readShift(t_slcircbuf::readSpace(rd_n), rd_n); //reset rd_cntr tak aby byl pripraven
+    t_slcircbuf::shift(t_slcircbuf::readSpace(rd_n), rd_n); //reset rd_cntr tak aby byl pripraven
     next->sta.fs_in = &sta.fs_out; //napojim info o vzorkovacich frekv.
     return rd_n++;  //dalsi pijavice
 }
-
-
 

@@ -74,7 +74,7 @@ void t_rt_player::process(){
     if(!pre) return; //navazujem na zdroj dat?
 
     t_rt_slice wrks; //pracovni radek v multibufferu
-    t_slcircbuf::get(&wrks, 1);  //vyctem
+    d->get(wrks);  //vyctem
 
     int scale = 1 << (format.sampleSize()-1);  //mame to v signed proto -1
 
@@ -95,7 +95,7 @@ void t_rt_player::process(){
                 if(wrks.v.size() == M){
 
                     t_slcircbuf::write(wrks); //zapisem novy jeden radek
-                    t_slcircbuf::read(&wrks, 1);
+                    t_slcircbuf::read(wrks);
                     wrks = t_rt_slice(sta.nn_tot / *sta.fs_in); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
                 }
 
@@ -108,7 +108,7 @@ void t_rt_player::process(){
          }
     }
 
-    t_slcircbuf::set(&wrks, 1);   //zapisem zpet i kdyz neni cely
+    t_slcircbuf::set(wrks);   //zapisem zpet i kdyz neni cely
     emit on_update(); //dame vedet dal
 }
 
@@ -161,11 +161,11 @@ void t_rt_player::change(){
     int N = set["Multibuffer"].get().toDouble();
     int M = set["Time"].get().toDouble() / 1000.0 * sta.fs_out;
 
-    t_slcircbuf::resize(M, true); //novy vnitrni multibuffer
+    t_slcircbuf::resize(M); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
     t_rt_slice dfs(0);
-    t_slcircbuf::set(&dfs, 1);
+    t_slcircbuf::set(dfs);
 
     int mmrt = set["__refresh_rate"].get().toDouble() * sta.fs_out * 1000;
     output_audio->setNotifyInterval(mmrt); //v ms

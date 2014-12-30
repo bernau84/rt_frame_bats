@@ -1,24 +1,37 @@
 #ifndef RT_MULTIBUFFER_H
 #define RT_MULTIBUFFER_H
 
-#include <QReadWriteLock>
-#include <QtDebug>
-
-/*! \todo - refactor to std library; but there is no way how to suplement QMutex or any lock v C03 standatd */
-
 #define NO_AVAIL_CHECK
 
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-//plna implementace cteciho/zapisovaciho kruh bufferu - misto stavu vraci hodnotu overflow
-//overflow < 0 == RUNNING; overflow = 0 == FULL;
-//overflow > 1 == OVERFLOW od posledniho cteni(coz ale neznamena ze jsme nezapsali!!)
-//primo potomek zamku - zamykame jak cteni tak zapis (cteni je dovoleno az po tom co uvolnen zapis,
-//vicero cteni nevadi, zapis take az co je docteno)
-//umoznujeme cteni z vicero zdroju - nezavisle read pointery
+/*! \brief - interface definition for lock - depend on concrete implementation
+ * \note - QReadWriteLock can be use for Qt, Mutex in C03 standard */
 
-template <typename T, int N> class t_multibuffer : public QReadWriteLock {
+class rt_lock {
+
+private:
+    virtual lockRead(){;}
+    virtual lockWrite(){;}
+    virtual unlock(){;}
+
+    rt_lock(){;}
+    ~rt_lock(){;}
+};
+
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+/*! \brief - reaw/write circular buffer with arbitrary size
+ * support only one item IO access (can't read/write array at once)
+ * overwrites data if no free space left
+ * \note - use template feature to implement item as array
+ * support overflow indicator, multi reader, one writer, locks */
+
+template <typename T, int N> class t_multibuffer {
+
     private:
+        rt_lock lock;
+
+    protected:
         int     size;
         int     wmark;
         int     rmark[N];
@@ -26,195 +39,99 @@ template <typename T, int N> class t_multibuffer : public QReadWriteLock {
         T       *buf;
 
     public:
-        int write(T smp);  //jednoduche pridani vzorku - aby se to nekomplikovalo memcpy
-        int read(T *smp, int n = 0);  //jednoduche cteni vzorku
-        int write(T *smp, int len);  //cyklicke volani write - zadna lezpsi jednoduch optimalizace neni mozna
-        int read(T *smp, int *len, int n = 0);
+        int write(T &smp);  /*!< simple append (update write pointer), return 1 with success */
+        int read(T &smp, int n = 0);  /*!< simple read (update read pointer), return 1 with success */
 
-        int get(T *smp, int len, int n = 0);  //funkce ktera precte bez toho aby posunula ctecim pntr, neupdatuje ani over
-        int set(T *smp, int len);  //funkce ktera zapise bez toho aby posunula write pntr, neupdatuje ani over
+        T get(int n = 0);  /*!< reads item on read pointer without it shift, return 1 if item avaiable */
+        int set(T &smp);  /*!< re/write item on write pointer without it shift, return 1 if item avaiable */
 
-        int readShift(int len, int n = 0);     //funkce posouvajici cteci pointer (dummy read); pracuje s overflow
-        int writeShift(int len);    //funkce posouvajici cteci pointer (dummy write); pracuje s overflow
+        int shift(int len, int n = 0);     /*!< shift read pointer / dummy read = reflect overflow flag */
 
-        int writeSpace(int n = 0);     //misto pro zapis
-        int readSpace(int n = 0);      //kolik muzem vycist
+        int readSpace(int n = 0);      /*!< how much items can be reads/avaiable items */
+        int writeSpace(int n = 0);     /*!< how much items can be write to overwite read buffer n */
+                                       /*! warning - it is not the free space because it can owerwrite another
+                                        * read pointer and we can implement minimum fro all writeSpace because
+                                        * we dont know which of N read pointers are used */
 
-        bool    isEmpty(int n = 0);
-        bool    isOver(int n = 0);
+        bool isEmpty(int n = 0){
 
-        bool    resize(int _size, bool keep = true); //keep the previous values?
-        void    clear(void);  //nulujem rd a ar indexy; prvky nemenime
-        void    init(T df);  //nastavi hodnoty bufferu na konstantni hodnoty
-        int     size(){ return size; }  //
+            return (((overflow[n % N] < 0) && (wmark == rmark[n % N])));
+        }
 
-        t_multibuffer(int _size);
-        ~t_multibuffer();
+        bool isOver(int n = 0){
+
+            return (overflow[n % N] > 0) ? 1 : 0;
+        }
+
+        t_multibuffer(int _size, const rt_lock &_lock)  /*!< size is number of item, can work directly on p if int NULL */
+            :size(_size), lock(_lock){
+
+            buf = (T *) new T[size];
+
+            wmark = 0;
+            for(int i=0; i<N; i++){
+
+                overflow[i] = -1;
+                rmark[i] = 0;
+            }
+        }
+
+        virtual ~t_multibuffer(){
+
+            if(buf)
+                delete[] buf;
+        }
 };
 
 //------------------------------------------------------------------------------
-template <typename T, int N> t_multibuffer<T, N>::t_multibuffer(int _size)
-    :size(_size), QReadWriteLock(QReadWriteLock::NonRecursive){
-
-    buf = (T *)0;
-    if(N > 0) resize(_size);
-}
-
 //------------------------------------------------------------------------------
-template <typename T, int N> bool t_multibuffer<T, N>::isEmpty(int n){
+template <typename T, int N> T t_multibuffer<T, N>::get(int n){
 
-    return(((overflow[n % N] < 0) && (wmark == rmark[n % N])));
-}
-
-//------------------------------------------------------------------------------
-template <typename T, int N> bool t_multibuffer<T, N>::isOver(int n){
-
-    return(overflow[n % N] > 0) ? 1 : 0;
-}
-
-//------------------------------------------------------------------------------
-//funkce nanstavuje owerwrite, proto pri nacitani hrozi ze pokud mame preteceni
-//dovoli nam kruhove nasict libovolne velke mnozstvi dat
-//varianta NO_AVAIL_CHECK nehlida kde je zapisovaci pointer
-template <typename T, int N> int t_multibuffer<T, N>::get(T *smp, int len, int n){
-
-    int L = len;
     int nn = n % N;
-    int bmark = rmark[nn];     //zaloha cteciho pointeru
-
-    lockForRead();
 
 #ifndef NO_AVAIL_CHECK
-    while(((wmark != bmark) || (overflow[nn] >= 0))&&(L > 0)){
-
-         if((plen = (wmark > bmark) ? (wmark - bmark) : (size - bmark))) plen = L;
-         for(int i=0; i<plen; i++) smp[i] = buf[bmark+i];
-         if((bmark += plen) >= size) bmark -= size;
-         L -= plen; smp += plen;
-    }
-#else
-    for(int i=0; i<len; i++, L--) smp[i] = buf[(bmark+i) % size];
+    if(readSpace(nn) <= 0)
+        return T();
 #endif //NO_AVAIL_CHECK
 
-    unlock();
-    return ((len -= L));      //kolik sme skutecne precetli
+    lock.lockRead();
+    T ret = buf[rmark[nn]];
+    lock.unlock();
+    return ret;      //ok
 }
 
 //------------------------------------------------------------------------------
-//funkce nenastavuje wr pntr ani ower - slouzi jen pro zapis na slepo
-template <typename T, int N> int t_multibuffer<T, N>::set(T *smp, int len){
+template <typename T, int N> int t_multibuffer<T, N>::set(T &smp){
 
-    int L = 0;
+#ifndef NO_AVAIL_CHECK
+    if((smp == NULL) /* || (writeSpace(n) < 0)*/)
+        return 0;
+#endif //NO_AVAIL_CHECK
 
-    lockForWrite();
-    while(L < len){
-
-        smp[L] = buf[(wmark+L) % size];
-        L += 1;
-    }
-    unlock();
-
-    return L;
+    lock.lockWrite();
+    buf[wmark] = smp;
+    lock.unlock();
+    return 1;
 }
 
 
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::readShift(int len, int n){
+template <typename T, int N> int t_multibuffer<T, N>::shift(int len, int n){
 
     int nn = n % N;
 
-    lockForRead();
+    lock.lockRead();
     if((rmark[nn] += len) >= size) rmark[nn] -= size;
     overflow[nn] = -1;
-    unlock();
+    lock.unlock();
 
     return overflow[nn];
 }
 
-
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::writeShift(int len){
+template <typename T, int N> int t_multibuffer<T, N>::write(T &smp){
 
-    lockForWrite();
-    while(len--){
-
-        if((wmark += 1) >= size) wmark -= 1;
-
-        for(int nn=0; nn<N; nn++)  //testujem pro vsechny cteci pointery!
-            if((overflow[nn] > 0) || (wmark == rmark[nn]))  //musime testovat znovu po updatu
-                overflow[nn] = (overflow[nn]++) % size; //vetsi preteceni nez size neindikujem, po prvnim srovnani je overflow 0 == FULL
-    }
-    unlock();
-
-    return 0;
-}
-
-//------------------------------------------------------------------------------
-template <typename T, int N> bool t_multibuffer<T, N>::resize(int _size, bool keep){
-
-    lockForWrite();
-
-    T *bbuf = buf;  //backup
-    int bsize = size;
-
-    size = _size;
-    wmark = (!keep) ? 0 : wmark[i] % size;
-    for(int i=0; i<N; i++){
-
-        overflow[i] = (!keep) ? -1 : overflow[i];
-        rmark[i] = (!keep) ? 0 : rmark[i] % size;  //will perfectly work for enlarging, tricky for shortening
-    }
-
-    if(size)    //bacause also zero length buffer can have pointer; we wan't this
-        try {
-
-            buf = (T *) new T[_size];
-            if(buf && keep)
-                for(int i=i; i<bsize; i++)
-                    buf[i] = bbuf[i % size];
-        }
-        catch (...) {
-
-            qDebug() << "Multibuffer reallocation error";
-        }
-
-    if(bbuf) delete[] bbuf;
-    unlock();
-
-    return(buf != (T *)0);
-}
-
-//------------------------------------------------------------------------------
-template <typename T, int N> void t_multibuffer<T, N>::clear(void){
-
-    lockForWrite();
-    //memset(buf, 0, size*sizeof(T));
-    wmark = 0;
-
-    for(int i=0; i<N; i++){
-
-        overflow[i] = -1;
-        rmark[i] = 0;
-    }
-
-    unlock();
-}
-
-//------------------------------------------------------------------------------
-template <typename T, int N> void t_multibuffer<T, N>::init(T df){
-
-    lockForWrite();
-
-    for(int i=0; i<size; i++)
-        buf[i] = df;
-
-    unlock();
-}
-
-//------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::write(T smp){
-
-    lockForWrite();
+    lock.lockWrite();
 
     buf[wmark++] = smp;
     if(wmark >= size) wmark = 0;
@@ -223,74 +140,40 @@ template <typename T, int N> int t_multibuffer<T, N>::write(T smp){
         if((overflow[nn] > 0) || (wmark == rmark[nn]))  //musime testovat znovu po updatu
             overflow[nn] = (overflow[nn]+1) % size; //vetsi preteceni nez size neindikujem, po prvnim srovnani je overflow 0 == FULL
 
-    unlock();
+    lock.unlock();
 
     return 0;
 }
 
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::read(T *smp, int n){
+template <typename T, int N> int t_multibuffer<T, N>::read(T &smp, int n){
 
     int nn = n % N;
     int ret = 0;
 
-    lockForRead();
+    lock.lockRead();
     if((wmark != rmark[nn]) || (overflow[nn] >= 0)){
 
-        *smp = buf[rmark[nn]++];
+        smp = buf[rmark[nn]++];
         if(rmark[nn] >= size) rmark[nn] = 0;
 
         overflow[nn] = -1; //OK
         ret = 1;
     }
-    unlock();
+    lock.unlock();
 
     return ret;
 }
 
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::write(T *smp, int len){
-
-    int L = 0;
-    while(L < len)
-        write(smp[L++]); //v pripade nekolika readeru jedina (elegantni) moznost
-
-    return L;
-}
-
-//------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::read(T *smp, int *len, int n){
-
-    int plen, L = *len;
-    int nn = n % N;
-
-    lockForRead();
-    while(((wmark != rmark[nn]) || (overflow[nn] >= 0)) && (L > 0)){
-
-        plen = (wmark > rmark[nn]) ? (wmark - rmark[nn]) : (size - rmark[nn]);
-         if(plen > N) plen = N;
-         //memcpy((void *)smp, (void *)&buf[rmark[nn]], plen*sizeof(T));//nelze pro objekty
-         for(int i=0; i<plen; i++) smp[i] = buf[rmark[nn]+i];
-         if((rmark[nn] += plen) >= size) rmark[nn] -= size;
-         L -= plen; smp += plen;
-         overflow[nn] = -1;                           //OK
-    }
-    unlock();
-
-    *len -= N;      //kolik sme skutecne precetli
-    return overflow[nn];
-}
-
-//------------------------------------------------------------------------------
-//vycitani volneho mista z kruh bufferu ktery vyuziva cely prostor
 template <typename T, int N> int t_multibuffer<T, N>::readSpace(int n){
 
-    lockForWrite();
+    lock.lockWrite();
 
     int nn = n % N;
     int tmp = (int)(wmark - rmark[nn]);
     if( ((tmp == 0)&&(overflow[nn] >= 0)) || (tmp < 0) ) tmp += size;   //volny prostor je prelozeny, nebo doslo k preteceni
-    unlock();
+    lock.unlock();
 
     return(tmp);   //prostor nebyl prelozeny (rd muze != wr i pri overflow)
 }
@@ -299,7 +182,7 @@ template <typename T, int N> int t_multibuffer<T, N>::readSpace(int n){
 //vycitani volneho mista z kruh bufferu ktery vyuziva cely prostor
 template <typename T, int N> int t_multibuffer<T, N>::writeSpace(int n){
 
-    lockForWrite();
+    lock.lockForWrite();
 
     int nn = n % N;
     int tmp = (int)(rmark[nn] - wmark);
@@ -309,14 +192,8 @@ template <typename T, int N> int t_multibuffer<T, N>::writeSpace(int n){
     } else
       tmp = 0;
 
-    unlock();
+    lock.unlock();
     return tmp; //mam tu preteceni - nelze zapsat nic; az dokud si app overflow neshodi
-}
-
-//------------------------------------------------------------------------------
-template <typename T, int N> t_multibuffer<T, N>::~t_multibuffer(){
-
-    resize(0);
 }
 
 //------------------------------------------------------------------------------

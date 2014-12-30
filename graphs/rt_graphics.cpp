@@ -73,44 +73,6 @@ void rt_graphics::process()
     //pokud je zadane vygenerovat indexy k y rezum (podle aktualniho poctu prvku ovsem)
     //velke todo - automaticke prizpusobeni delky os a popisky
 
-    t_rt_slice p_slice;   //radek soucasneho spektra
-    t_slcircbuf::get(&p_slice, 1);  //vyctem aktualni rez
-
-    t_rt_slice t_amp;  //radek caovych dat
-    while(pre->t_slcircbuf::read(&t_amp, rd_i)){ //vyctem radek
-
-        for(int i=0; i<t_amp.v.size(); i++){
-
-            int dd, m  = (sta.nn_run % D);
-            double t_filt = bank[m]->Process(t_amp.v[i].A, &dd);  //band pass & decimace
-
-            sta.nn_run += 1;
-            sta.nn_tot += 1;
-
-            if((dd == 0) && (mask & (1 << m))){ //z filtru vypadl decimovany vzorek ktery chcem
-
-                if(m & 0x1) //mirroring u lichych pasem
-                    t_filt *= -1;
-
-                p_shift.v.last().A += t_filt;  //scitame s prispevky od jinych filtru (pokud jsou vybrany)
-                p_shift.v.last().f  = mask;
-            }
-
-            if(m == (D-1)){  //mame hotovo (decimace D) vzorek muze jit ven
-
-                p_shift.v = t_rt_slice::t_rt_tf(sta.nn_tot / *sta.fs_in); //pripravim novy
-
-                if((p_shift.v.size()) == R) {
-
-                    t_slcircbuf::write(p_shift); //zapisem novy jeden radek
-                    t_slcircbuf::read(&p_shift, 1);
-                    p_shift = t_rt_slice(0, 1); //inicializace noveho spektra
-                }
-            }
-        }
-    }
-
-    t_slcircbuf::set(&p_shift, 1);  //vratime aktualni cpb spektrum
 #endif //DEMO
 
 #if DEMO

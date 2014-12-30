@@ -25,8 +25,15 @@ enum e_axis_jtfa {
     EAXIS_U_FREQ = EAXIS_Y
 };
 
+//typedef struct {
+//    double min;
+//    double max;
+//} t_rt_scale;
 
-class rt_color_scale : public t_rt_base, rt_graph_frame {
+/*! \brief - okno s barevnym gradientem a osou pro min a max
+ * jde v podstate o extra jednoduchy graf s vlastnim frameworkem
+*/
+class rt_color_scale : public t_rt_base<float>, rt_graph_frame {
 
 public:
     rt_graph_context *m_canvas;
@@ -41,6 +48,7 @@ public slots:
         t_rt_base(parent, resource),
         m_canvas(canvas)
     {
+
         change();
     }
 
@@ -49,7 +57,7 @@ public slots:
     }
 };
 
-class rt_graph : public t_rt_base
+class rt_graph : public t_rt_base<float>
 {
     Q_OBJECT
 

@@ -83,7 +83,7 @@ void t_rt_snd_card::process(){
     if(!readable_l) return;
 
     t_rt_slice<double> w; //pracovni radek v multibufferu
-    t_slcircbuf::get(&w, 1);  //vyctem
+    t_slcircbuf::get(w);  //vyctem
 
     int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
     double frres = 2 / *sta.fs_in; //fr rozliseni == nyquistovu frekvenci
@@ -101,7 +101,7 @@ void t_rt_snd_card::process(){
         sta.nn_run += 1;   //total - jen inkrementujem, kvuli statistice
     }
 
-    t_slcircbuf::set(&w, 1);   //zapisem zpet i kdyz neni cely
+    t_slcircbuf::set(w);   //zapisem zpet i kdyz neni cely
     emit on_update(); //dame vedet dal
 }
 
@@ -156,11 +156,11 @@ void t_rt_snd_card::change(){
     int N = set["Multibuffer"].get().toDouble();
     int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
 
-    t_slcircbuf::resize(N, true); //novy vnitrni multibuffer
+    t_slcircbuf::resize(N); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
-    t_rt_slice dfs(0, 0);
-    t_slcircbuf::set(&dfs); //vymazem akt. slice aby se mohl s novymi daty inicializovat
+    t_rt_slice dfs(0);
+    t_slcircbuf::set(dfs); //vymazem akt. slice aby se mohl s novymi daty inicializovat
 
     input_audio->setNotifyInterval(set["Refresh"].get().toDouble());  //navic mame to od byteready
     connect(input_audio, SIGNAL(notify()), SLOT(process()));

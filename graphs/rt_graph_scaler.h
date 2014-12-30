@@ -58,13 +58,13 @@ public slots:
         }
 
         t_rt_slice t_scl;   //actual scale [loscale, hiscale]
-        t_slcircbuf::get(&t_scl, 1);  //read out
+        t_slcircbuf::get(t_scl);  //read out
         double min = t_scl.v[0];
         double max = t_scl.v[1];
         double rc = 2 / (sta.fs_out * refresh);
 
         t_rt_slice t_amp;  //amplitudes
-        while(pre->t_slcircbuf::read(&t_amp, rd_i)){ //read out
+        while(pre->t_slcircbuf::read(t_amp, rd_i)){ //read out
 
             for(int i=0; i<t_amp.size(); i++){
 
@@ -76,7 +76,7 @@ public slots:
 
             /*! \todo - recount dividings for given axis base */
 
-            t_slcircbuf::write(&t_scl, 1);  // out
+            t_slcircbuf::write(t_scl);  // out
         }
     }
 
@@ -92,7 +92,8 @@ public slots:
 
         pause();
 
-        this->resize(pre->size(), false);  //follow previous
+        if(d) delete d;
+        d = new t_slcircbuf(pre->size());  //follow previous
 
         emit on_change(); //poslem dal
 

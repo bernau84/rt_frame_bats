@@ -49,12 +49,9 @@ public slots:
                 analyse(w);
             }
         }
-
     }
 
     virtual void change(){
-
-
 
     }
 
@@ -97,7 +94,6 @@ class t_rt_shift : public t_rt_analysis
     Q_OBJECT
 
 private:
-
     int decif; /*! pocet pasem / decimacni faktor */
     int numb; /*! pocet bodu v radku */
     double refr; /*! refresh rate */
@@ -106,7 +102,6 @@ private:
     t_pFilter<double> *bank[RT_MAX_BANDS_PER_OCTAVE];   //pasmova propust co se de posouvat
 
 public slots:
-
     void process();
     void change();
 

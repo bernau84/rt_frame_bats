@@ -48,7 +48,7 @@ t_rt_cpb::~t_rt_cpb(){
 void t_rt_cpb::analyse(const t_rt_slice<double> &w){
 
     t_rt_slice<double> p_cpb;   //radek soucasneho spektra
-    t_slcircbuf::get(&p_cpb, 1);  //vyctem aktualni cpb spektrum
+    t_slcircbuf::get(p_cpb);  //vyctem aktualni cpb spektrum
 
     for(int i=0; i<w.A.size(); i++){
 
@@ -72,8 +72,10 @@ void t_rt_cpb::analyse(const t_rt_slice<double> &w){
             //double f_n = *sta.fs_in * (pow(2, -j/octm) - pow(2, -(j+1)/octm));
 
             //upgrade hodnot v bufferu
-            p_cpb.v[j]          = t_rt_slice::t_rt_ai(aver[j]->Process(a_st_0, 0), j);
-            p_cpb.v[n*octm + j] = t_rt_slice::t_rt_ai(aver[n*octm + j]->Process(a_st_n, 0), octm*n+j);
+            p_cpb.A[j] = aver[j]->Process(a_st_0, 0);
+            p_cpb.I[j] = j; //f_0
+            p_cpb.A[n*octm + j] = aver[n*octm + j]->Process(a_st_n, 0);
+            p_cpb.I[n*octm + j] = octm*n+j; //f_n
         }
 
         double s_time = sta.nn_run++ / *sta.fs_in;  //aktualne zpracovavany cas
@@ -82,12 +84,12 @@ void t_rt_cpb::analyse(const t_rt_slice<double> &w){
         if(s_time <= (p_cpb.t + 1 / sta.fs_out)){ //je cas vzorku vetsi nez doba od dalsiho spektra
 
             t_slcircbuf::write(p_cpb); //zapisem novy jeden radek
-            t_slcircbuf::read(&p_cpb, 1); //a novy pracovni si hned vyctem (na ctecim bufferu 0)
+            t_slcircbuf::read(p_cpb); //a novy pracovni si hned vyctem (na ctecim bufferu 0)
             p_cpb = t_rt_slice(s_time, octm*octn); //inicializace noveho spektra
         }
     }
 
-    t_slcircbuf::set(&p_cpb, 1);  //vratime aktualni cpb spektrum
+    t_slcircbuf::set(p_cpb);  //vratime aktualni cpb spektrum
 }
 
 //------------------------------------------------------------------------
@@ -99,10 +101,11 @@ void t_rt_cpb::change(){
     pause();
 
     sta.fs_out = 1.0 / set["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    t_slcircbuf::resize(set["Slices"].get().toDouble(), true); //"novy" vnitrni multibuffer; data se ale pokusime zachovat
+
+    t_slcircbuf::resize(set["Slices"].get().toDouble()); //"novy" vnitrni multibuffer; data se ale pokusime zachovat
 
     t_rt_slice s_empty(0.0, octm*octn);    //defaultni/prazdny radek
-    t_slcircbuf::set(&s_empty, 1);  //pripravime (vynulujem) si aktualni radek (nedopocitany nejspis)
+    t_slcircbuf::set(s_empty);  //pripravime (vynulujem) si aktualni radek (nedopocitany nejspis)
 
     for(int i=0; i<RT_MAX_OCTAVES_NUMBER; dline[i++] = 0)
         if(dline[i]) delete dline[i];
@@ -159,8 +162,8 @@ t_rt_shift::t_rt_shift(QObject *parent):
 void t_rt_shift::analyse(const t_rt_slice<double> &w){
 
     t_rt_slice p_shift;   //radek soucasneho spektra
-    t_slcircbuf::get(&p_shift, 1);  //vyctem aktualni rez
-    t_rt_slice::t_rt_ai last = p_shift.get();  //posledni zapsany
+    t_slcircbuf::get(p_shift);  //vyctem aktualni rez
+    t_rt_slice::t_rt_ai last = p_shift.last();  //posledni zapsany
 
     for(int i=0; i<w.A.size(); i++){
 
@@ -181,12 +184,12 @@ void t_rt_shift::analyse(const t_rt_slice<double> &w){
 
         if(last.I == (decif-1)){  //mame hotovo (decimace D) vzorek muze jit ven
 
-            p_shift.set(&last);
+            p_shift.set(last);
             if((p_shift.A.size()) == refr) {
 
                 t_slcircbuf::write(p_shift); //zapisem novy jeden radek
-                t_slcircbuf::read(&p_shift, 1);
-                p_shift = t_rt_slice(0, 1); //inicializace noveho spektra
+                t_slcircbuf::read(p_shift);
+                p_shift = t_rt_slice(0.0, 1); //inicializace noveho spektra
             }
 
             last = t_rt_slice::t_rt_ai(0.0, 0.0);
@@ -194,8 +197,8 @@ void t_rt_shift::analyse(const t_rt_slice<double> &w){
         }
     }
 
-    p_shift.set(&last);
-    t_slcircbuf::set(&p_shift, 1);  //vratime aktualni
+    p_shift.set(last);
+    t_slcircbuf::set(p_shift);  //vratime aktualni
 }
 
 //------------------------------------------------------------------------
@@ -218,10 +221,10 @@ void t_rt_shift::change(){
     pause();
 
     sta.fs_out = *sta.fs_in / decif;  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    t_slcircbuf::resize(refr, true); //novy vnitrni multibuffer
+    t_slcircbuf::resize(refr); //novy vnitrni multibuffer
 
-    t_rt_slice dfs(0, 1);  //priprava radku (musi mit jeden prvek!)
-    t_slcircbuf::set(&dfs, 1);
+    t_rt_slice dfs(0.0, 1);  //priprava radku (musi mit jeden prvek!)
+    t_slcircbuf::set(dfs);
 
     for(int i=0; i<RT_MAX_BANDS_PER_OCTAVE; bank[i++] = 0)
         if(bank[i]) delete bank[i];

@@ -49,7 +49,8 @@ HEADERS  += mainwindow.h\
     graphs/rt_ogl_context.h \
     graphs/rt_ogl_memory.h \
     graphs/rt_ogl_object.h \
-    inputs/rt_sources.h
+    inputs/rt_sources.h \
+    base/rt_doublebuffer.h
 
 FORMS    += mainwindow.ui
 
