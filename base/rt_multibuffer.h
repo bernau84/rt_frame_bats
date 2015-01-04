@@ -6,15 +6,15 @@
 /*! \brief - interface definition for lock - depend on concrete implementation
  * \note - QReadWriteLock can be use for Qt, Mutex in C03 standard */
 
-class rt_lock {
+class t_rt_lock {
 
 private:
     virtual lockRead(){;}
     virtual lockWrite(){;}
     virtual unlock(){;}
 
-    rt_lock(){;}
-    ~rt_lock(){;}
+    t_rt_lock(){;}
+    ~t_rt_lock(){;}
 };
 
 
@@ -29,7 +29,7 @@ private:
 template <typename T, int N> class t_multibuffer {
 
     private:
-        rt_lock lock;
+        t_rt_lock lock;
 
     protected:
         int     size;
@@ -63,7 +63,7 @@ template <typename T, int N> class t_multibuffer {
             return (overflow[n % N] > 0) ? 1 : 0;
         }
 
-        t_multibuffer(int _size, const rt_lock &_lock)  /*!< size is number of item, can work directly on p if int NULL */
+        t_multibuffer(int _size, const t_rt_lock &_lock)  /*!< size is number of item, can work directly on p if int NULL */
             :size(_size), lock(_lock){
 
             buf = (T *) new T[size];

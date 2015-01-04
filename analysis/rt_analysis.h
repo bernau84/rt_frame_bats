@@ -4,10 +4,10 @@
 #include <QList>
 
 #include "base\rt_basictypes.h"
-#include "base\t_rt_base.h"
+#include "base\rt_base.h"
 #include "inputs\rt_sources.h"
 #include "freq_analysis.h"
-#include "freq_rt_filtering.h"
+#include "freq_filtering.h"
 
 #define RT_MAX_OCTAVES_NUMBER      20
 #define RT_MAX_BANDS_PER_OCTAVE    24
@@ -34,10 +34,10 @@ public slots:
 
     virtual void process(){
 
-        t_rt_source *source = dynamic_cast<t_rt_source *>pre;
+        t_slcircbuf *source = dynamic_cast<t_slcircbuf *>pre;
         if(!source) return; //navazujem na zdroj dat?
 
-        t_rt_slice<double> w;  //radek caovych dat
+        t_rt_slice<double> w;  //radek casovych dat
         while(source->t_slcircbuf::read(&w, rd_i)){ //vyctem radek
 
             if(sta.state != t_rt_status::ActiveState){

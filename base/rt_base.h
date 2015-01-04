@@ -198,7 +198,7 @@ private:
 public:
 
     /*! \brief resize & reset */
-    void resize(int _size){
+    virtual void resize(int _size){
 
         //keeping data is not possible cause possition of rd/wr
         //pointers is unpredictible

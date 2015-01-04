@@ -4,7 +4,7 @@
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLPaintDevice>
 #include <QtGui/QPainter>
-
+#include <QVector3D>
 
 #define RT_OGL_ALLOCATOR_MEM    0 //o - if by defaultunused, 2000000 by default
 
@@ -42,7 +42,6 @@ class rt_graph_frame : public QOpenGLFramebufferObject {
 private:
     rt_graph_context *m_context;  //ogl context + qwindow
 
-    QMatrix4x4 m_matrix;  //perspective matrix
     GLuint m_posAttr;
     GLuint m_colAttr;
     GLuint m_matrixUniform;
@@ -72,7 +71,18 @@ private:
 
 public slots:
     //called from window gui
-    void update_orientation(QPoint angles){
+    void update_orientation(QVector3D angles){
+
+        //recount m_matrix
+    }
+
+    //called from window gui
+    void update_scales(QVector3D min, QVector3D max){
+
+        /*! \todo */
+        //scale.x = 1.0 / (max.x - min.x); // 1.0/(max - min)
+        //shift.x = -min.x / (max.x - min.x); // -min/(max - min)
+        //and so..
 
         //recount m_matrix
     }
@@ -112,20 +122,6 @@ public slots:
     }
 
 private:
-    /*! \brief annonce future memory requirements
-    */
-    GLfloat *alloc(quint nfloats){
-
-        return m_allocator.alloc(nfloats);
-    }
-
-    /*! \brief free unused mem
-    */
-    quint32 free(GLfloat *p){
-
-        return m_allocator.free(p);
-    }
-
     /*! \brief get first unused vbo index - that is for vbo default GL_INVALID_VALUE
      * if vbo is set than return index of vbo record
      */
@@ -140,6 +136,20 @@ private:
 
 
 public:
+
+    /*! \brief annonce future memory requirements
+    */
+    GLfloat *alloc(quint nfloats){
+
+        return m_allocator.alloc(nfloats);
+    }
+
+    /*! \brief free unused mem
+    */
+    quint32 free(GLfloat *p){
+
+        return m_allocator.free(p);
+    }
 
     /*! \brief define particular graph object, return id
     */

@@ -1,6 +1,35 @@
 #ifndef RT_GRAPH_COLORMAP_H
 #define RT_GRAPH_COLORMAP_H
 
+
+/*! \brief - okno s barevnym gradientem a osou pro min a max
+ * jde v podstate o extra jednoduchy graf s vlastnim frameworkem
+*/
+class rt_color_scale : public t_rt_base<float>, rt_graph_frame {
+
+public:
+    rt_graph_context *m_canvas;
+
+public slots:
+    on_change();
+
+    /*! \todo
+     */
+
+    explicit rt_color_scale(QObject *parent = 0, const QDir &resource = QDir(), rt_graph_context *canvas):
+        t_rt_base(parent, resource),
+        m_canvas(canvas)
+    {
+        change();
+    }
+
+    virtual ~rt_color_scale(){
+
+    }
+};
+
+
+
 typedef rt_graph_clr_map QList<QPair<QColor, QColor> >;
 
 class rt_graph_clr_gradient {

@@ -45,7 +45,7 @@ template <typename T, int N> class t_doublebuffer : private t_multibuffer<N, T> 
         bool    isEmpty(int n = 0){ return t_multibuffer::isEmpty(n); }
         bool    isOver(int n = 0){ return t_multibuffer::isOver(n); }
 
-        t_doublebuffer(int _size, const rt_lock &_lock):
+        t_doublebuffer(int _size, const t_rt_lock &_lock):
             t_multibuffer(2*_size, _lock){
 
             size = _size;  //workaround - mask higher half

@@ -25,7 +25,7 @@ typedef struct {
 } t_rt_graph_c __attribute__ ((packed));
 
 
-class rt_graph_object {
+class rt_graph_object : public QMatrix4x4 {  //perspective matrix integral part of object
 
 public:
     GLuint m_ver; //vertices vbo
