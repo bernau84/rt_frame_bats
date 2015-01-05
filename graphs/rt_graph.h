@@ -2,13 +2,13 @@
 #define RT_GRAPHICS_H
 
 #include "outputs/rt_output.h"
-#include "rt_graph_axis.h"
 #include "base/rt_doublebuffer.h"
 #include "base/rt_base.h"
 #include "graphs/rt_ogl_object.h"
 #include "graphs/rt_ogl_frame.h"
 #include "graphs/rt_ogl_memory.h"
 #include "graphs/rt_ogl_context.h"
+#include "graphs/rt_graph_scaler.h"
 
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLFunctions>
@@ -16,14 +16,43 @@
 #include <QtGui/QOpenGLShaderProgram>
 #include <QtGui/QScreen>
 #include <QSignalMapper>
+#include <QVector3d>
 
-//    RT_GR_OBJ_TIMESL,       /*!< 1 - vertical slices indexes */
-//    RT_GR_OBJ_FREQSL,       /*!< 2 - horizontal slices */
-//    RT_GR_OBJ_TRISURF,      /*!< 3 - surface triangulation */
-//    RT_GR_OBJ_AXES,       /*!< 4 - axis and fractions */
-//    RT_GR_OBJ_LABELS,       /*!< 5 - axis and fractions */
-//    RT_GR_OBJ_GRAD       /*!< 6 - color gradient sub */
+enum e_rt_graph_object {
 
+    RT_OBJ_0_PNTS,
+    RT_OBJ_0_TIMESL,       /*!<vertical slices indexes */
+    RT_OBJ_0_FREQSL,       /*!<horizontal slices */
+    RT_OBJ_0_TRISURF,      /*!<surface triangulation */
+    RT_OBJ_0_AXIS_X,       /*!<axis and fractions */
+    RT_OBJ_0_AXIS_Y,       /*!<axis and fractions */
+    RT_OBJ_0_AXIS_Z,       /*!<axis and fractions */
+    RT_OBJ_0_LABELS,       /*!<axis and fractions */
+    RT_OBJ_0_GRAD,         /*!<color gradient sub */
+
+    RT_OBJ_1_PNTS,
+    RT_OBJ_1_TIMESL,       /*!<vertical slices indexes */
+    RT_OBJ_1_FREQSL,       /*!<horizontal slices */
+    RT_OBJ_1_TRISURF,      /*!<surface triangulation */
+    RT_OBJ_1_AXIS_X,       /*!<axis and fractions */
+    RT_OBJ_1_AXIS_Y,       /*!<axis and fractions */
+    RT_OBJ_1_AXIS_Z,       /*!<axis and fractions */
+    RT_OBJ_1_LABELS,       /*!<axis and fractions */
+    RT_OBJ_1_GRAD,         /*!<color gradient sub */
+
+    RT_OBJ_2_PNTS,
+    RT_OBJ_2_TIMESL,       /*!<vertical slices indexes */
+    RT_OBJ_2_FREQSL,       /*!<horizontal slices */
+    RT_OBJ_2_TRISURF,      /*!<surface triangulation */
+    RT_OBJ_2_AXIS_X,       /*!<axis and fractions */
+    RT_OBJ_2_AXIS_Y,       /*!<axis and fractions */
+    RT_OBJ_2_AXIS_Z,       /*!<axis and fractions */
+    RT_OBJ_2_LABELS,       /*!<axis and fractions */
+    RT_OBJ_2_GRAD,         /*!<color gradient sub */
+
+    /* and so */
+    RT_OBJ_NUMBER = 1000
+};
 
 enum e_axis_jtfa {
 
@@ -116,21 +145,14 @@ private:
     struct {
         double scale_lo;
         double scale_hi;
+        double angle;
     } trans[EAXIS_NUMB];
 
     rt_graph_context *m_canvas;  //inherits QWindow
-    QList<rt_graph_frame *> m_frame; //graph items collection (graph1, axis1, color-scale1, graph2, ...)
+    QList<rt_graph_frame *> m_frame; //object maintaner
+    QMap<rt_graph_object *, e_rt_graph_object> m_objects; //graph items collection (graph1, axis1, color-scale1, graph2, ...)
     rt_autoscale m_rescaler[EAXIS_NUMB];
     QSignalMapper m_mapper;
-
-    virtual void update(QVector<t_rt_graph_v> &w){
-
-        for(int i=0; i<m_rescaler.size(); i++){//feed axis autoscale
-
-            m_rescaler[i].
-        }
-        //scale & save into double multibuffer (prevent folding at circular buffer)
-    }
 
 public slots:
     void process(void){
@@ -156,7 +178,7 @@ public slots:
                     v3f << p3f;
                 }
 
-                update(v3f);
+                emit on_update();  //to rescallers
             }
         }
     }
@@ -168,11 +190,14 @@ public slots:
 
         pause();
 
+        m_frame.first()->
+
         sta.fs_out = frefresh;
         last_refresh = 0;
 
-        emit on_change(); //poslem dal
         resume();
+
+        emit on_change(); //poslem dal
     }
 
     void rescale(int id){
@@ -183,8 +208,8 @@ public slots:
         trans[id].scale_lo = divs.first();
         trans[id].scale_hi = divs.last();
 
-        QVector3d lo(trans[0].scale_lo, trans[1].scale_lo, trans[2].scale_lo);
-        QVector3d hi(trans[0].scale_hi, trans[1].scale_hi, trans[2].scale_hi);
+        QVector3d lo(trans[EAXIS_X].scale_lo, trans[EAXIS_Y].scale_lo, trans[EAXIS_Z].scale_lo);
+        QVector3d hi(trans[EAXIS_X].scale_hi, trans[EAXIS_Y].scale_hi, trans[EAXIS_Z].scale_hi);
 
         m_frame.first()->update_orientation(lo, hi);  //recount matrix
     }
@@ -199,9 +224,11 @@ public:
         m_frame << new rt_graph_frame(&m_canvas);
 
         //connect update scale signal of particullar axis to graph
+        //and uprade signal from graph to rescallers
         QObject::connect(&m_mapper, SIGNAL(mapped(int)), this, SLOT(rescale(int));
         for(int a=0; a<(int)EAXIS_NUMB; a++){
 
+            m_rescaler[a].connect(this);
             QObject::connect(&m_rescaler[a], SIGNAL(on_update()), &m_mapper, SLOT(map()));
             m_mapper.setMapping(&m_rescaler[a], a);
         }

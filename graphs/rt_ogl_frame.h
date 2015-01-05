@@ -6,6 +6,8 @@
 #include <QtGui/QPainter>
 #include <QVector3D>
 
+#include "graphs/rt_graph.h"
+
 #define RT_OGL_ALLOCATOR_MEM    0 //o - if by defaultunused, 2000000 by default
 
 class rt_graph_object;
@@ -21,16 +23,8 @@ enum e_rt_graph_obj_type {
     TRISURFACE      //points are triangle interpolation of surface
 };
 
-enum e_rt_graph_object_item {
-
-    RT_OBJ_VERTEXBUF = 0,    /*!< 0 - vertex buffer */
-    RT_OBJ_INDEXBUF_1 = 1,
-    RT_OBJ_INDEXBUF_2 = 2,
-    /* and so */
-    RT_OBJ_NUMBER = 1000
-};
-
-#define RT_VBO_NUMEBR RT_OBJ_NUMBER  //despite it can be independant from OBJ number
+#define RT_OBJ_N ((int)e_rt_graph_object::RT_OBJ_NUMBER)
+#define RT_VBO_N ((int)e_rt_graph_object::RT_OBJ_NUMBER)  //despite it can be independant from OBJ number
 
 /*!
  * \brief The rt_graph_frame class
@@ -50,8 +44,8 @@ private:
     GLuint m_framebuffer; //optional - for future use
     GLuint m_vao;   //optional - for future use
 
-    GLuint              m_vbo[RT_VBO_NUMBER];  //vbo stack all for vertices, colors, indices
-    rt_graph_object    *m_rto[RT_OBJ_NUMBER];  //framebuffer objects data
+    GLuint              m_vbo[RT_VBO_N];  //vbo stack all for vertices, colors, indices
+    rt_graph_object    *m_rto[RT_OBJ_N];  //framebuffer objects data
 
     //new object is not copy into gpu memory unless it is not already
     //in cache. use of global memory is assumed!
@@ -62,7 +56,7 @@ private:
         const GLfloat *base;  //remember origin buffer to provide data sharing
         GLuint sz;  //number of bytes / indices; also indicitor of used vbo!
         QList<const rt_graph_object *> ref;  //list of grpah object refers to this vbo
-    } m_mem[RT_VBO_NUMBER];
+    } m_mem[RT_VBO_N];
 
     QList<const rt_graph_object *> empty_rt_graph_object_List;  //helper
     t_cache empty_t_cache;  //helper
@@ -99,7 +93,7 @@ public slots:
      */
     void update(const rt_graph_object *o = NULL){
 
-        for(int i=0; i<RT_VBO_NUMBER; i++)  //update all cached vbo from original buffers
+        for(int i=0; i<RT_VBO_N; i++)  //update all cached vbo from original buffers
             if(m_mem[i].base && ((o == NULL) || (m_mem[i].ref.contains(o)))){
 
                 m_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[i]);
@@ -116,7 +110,7 @@ public slots:
 
         /*! \todo bind framebuffer
         */
-        for(int i=0; i<RT_OBJ_NUMBER; i++)  //render all object in frame
+        for(int i=0; i<RT_OBJ_N; i++)  //render all object in frame
             if(m_rto[i])
                 m_rto[i]->render(m_context);
     }
@@ -127,7 +121,7 @@ private:
      */
     qint32 get_vbo_i(GLuint vbo = GL_INVALID_VALUE){
 
-        for(int n=0; n<RT_VBO_NUMBER; n++)
+        for(int n=0; n<RT_VBO_N; n++)
             if(m_vbo[n] == vbo)
                 return n;
 
@@ -156,7 +150,7 @@ public:
     rt_graph_object *add(e_rt_graph_obj_type ty,
                          GLuint ver, GLuint col, GLuint ind, quint32 size){ //VBOs
 
-        for(quint32 oi = 0; oi < RT_OBJ_NUMBER; oi += 1)
+        for(quint32 oi = 0; oi < RT_OBJ_N; oi += 1)
             if(m_rto[oi] == NULL){
 
                 switch(ty){
@@ -185,13 +179,13 @@ public:
     */
     bool del(const rt_graph_object *o){
 
-        for(quint oi = 0; oi < RT_OBJ_NUMBER; oi += 1)
+        for(quint oi = 0; oi < RT_OBJ_N; oi += 1)
             if(m_rto[oi] == o){
 
                 delete m_rto[fpos];
                 m_rto[fpos] = NULL;
 
-                for(int vi = 0; vi < RT_VBO_NUMBER; vi += 1)
+                for(int vi = 0; vi < RT_VBO_N; vi += 1)
                     if(m_mem[vi].ref.contains(o)){
 
                         m_mem[vi].ref.removeOne(o);
@@ -217,7 +211,7 @@ public:
 
 #if defined (RT_OGL_ALLOCATOR_MEM == 0)
 
-        for(int n=0; n<RT_VBO_NUMBER; n++){
+        for(int n=0; n<RT_VBO_N; n++){
 
             if(ver.first == mem[n].base)
                 vbo_ver = m_vbo[n];
@@ -288,19 +282,19 @@ public:
             m_vbo[n] = GL_INVALID_VALUE;
         }
 
-        for(int n=0; n<RT_OBJ_NUMBER; n++){
+        for(int n=0; n<RT_OBJ_N; n++){
 
             m_rto[n] = NULL;
         }
 
-        m_context->glGenBuffers(RT_VBO_NUMBER, m_vbo);
+        m_context->glGenBuffers(RT_VBO_N, m_vbo);
     }
 
     /*! \brief destructor & dealocate
      */
     virtual ~rt_frame(){
 
-        for(quint oi = 0; oi < RT_OBJ_NUMBER; oi += 1)
+        for(quint oi = 0; oi < RT_OBJ_N; oi += 1)
             if(m_rto[oi]){
 
                 del(m_rto[oi]);
