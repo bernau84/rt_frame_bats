@@ -39,6 +39,8 @@ class t_rt_empty : public QObject
     Q_OBJECT
 protected:
 
+    friend class t_rt_empty; //allows acccess to subscriber method
+
     t_rt_empty *pre;  //predchozi prvek (zdroj dat)
     int rd_n;   //pocet registrovanych prvku pro cteni
     int rd_i;   //cteci index v multibufferu predchoziho prvku
@@ -51,6 +53,9 @@ protected:
         return QJsonObject();
     }
 
+    /*! \brief - set new reader ( = forward connection ) */
+    int subscriber(t_rt_empty *nod);  //vraci index pod kterym muze pristupovat do multibufferu
+
 public:
     t_rt_status sta;
     t_collection set;
@@ -62,12 +67,11 @@ public:
         rd_n = 0;
     }
 
-    int attach(t_rt_empty *nod);  //vraci index pod kterym muze pristupovat do multibufferu
+    /*! \brief - connect data source to this object ( = backwards connection ) */
+    int attach(t_rt_empty *nod){
 
-    int connect(t_rt_empty *nod){
-
-        if((pre = nod))
-            rd_i = pre->attach(this);
+        if((pre = nod) != NULL)
+            rd_i = pre->subscriber(this);
 
         return rd_i;
     }

@@ -20,35 +20,33 @@
 
 enum e_rt_graph_object {
 
-    RT_OBJ_0_PNTS,
-    RT_OBJ_0_TIMESL,       /*!<vertical slices indexes */
+    RT_OBJ_0_PNTS,         /*!<points */
+    RT_OBJ_0_TIMESL,       /*!<vertical slices */
     RT_OBJ_0_FREQSL,       /*!<horizontal slices */
     RT_OBJ_0_TRISURF,      /*!<surface triangulation */
     RT_OBJ_0_AXIS_X,       /*!<axis and fractions */
     RT_OBJ_0_AXIS_Y,       /*!<axis and fractions */
     RT_OBJ_0_AXIS_Z,       /*!<axis and fractions */
-    RT_OBJ_0_LABELS,       /*!<axis and fractions */
-    RT_OBJ_0_GRAD,         /*!<color gradient sub */
+    RT_OBJ_0_LABELS,       /*!<axis labels */
 
     RT_OBJ_1_PNTS,
-    RT_OBJ_1_TIMESL,       /*!<vertical slices indexes */
-    RT_OBJ_1_FREQSL,       /*!<horizontal slices */
-    RT_OBJ_1_TRISURF,      /*!<surface triangulation */
-    RT_OBJ_1_AXIS_X,       /*!<axis and fractions */
-    RT_OBJ_1_AXIS_Y,       /*!<axis and fractions */
-    RT_OBJ_1_AXIS_Z,       /*!<axis and fractions */
-    RT_OBJ_1_LABELS,       /*!<axis and fractions */
-    RT_OBJ_1_GRAD,         /*!<color gradient sub */
+    RT_OBJ_1_TIMESL,
+    RT_OBJ_1_FREQSL,
+    RT_OBJ_1_TRISURF,
+    RT_OBJ_1_AXIS_X,
+    RT_OBJ_1_AXIS_Y,
+    RT_OBJ_1_AXIS_Z,
+    RT_OBJ_1_LABELS,
 
     RT_OBJ_2_PNTS,
-    RT_OBJ_2_TIMESL,       /*!<vertical slices indexes */
-    RT_OBJ_2_FREQSL,       /*!<horizontal slices */
-    RT_OBJ_2_TRISURF,      /*!<surface triangulation */
-    RT_OBJ_2_AXIS_X,       /*!<axis and fractions */
-    RT_OBJ_2_AXIS_Y,       /*!<axis and fractions */
-    RT_OBJ_2_AXIS_Z,       /*!<axis and fractions */
-    RT_OBJ_2_LABELS,       /*!<axis and fractions */
-    RT_OBJ_2_GRAD,         /*!<color gradient sub */
+    RT_OBJ_2_TIMESL,
+    RT_OBJ_2_FREQSL,
+    RT_OBJ_2_TRISURF,
+    RT_OBJ_2_AXIS_X,
+    RT_OBJ_2_AXIS_Y,
+    RT_OBJ_2_AXIS_Z,
+    RT_OBJ_2_LABELS,
+
 
     /* and so */
     RT_OBJ_NUMBER = 1000
@@ -150,7 +148,7 @@ private:
 
     rt_graph_context *m_canvas;  //inherits QWindow
     QList<rt_graph_frame *> m_frame; //object maintaner
-    QMap<rt_graph_object *, e_rt_graph_object> m_objects; //graph items collection (graph1, axis1, color-scale1, graph2, ...)
+    QMap<e_rt_graph_object, rt_graph_object *> m_objects; //graph items collection (graph1, axis1, color-scale1, graph2, ...)
     rt_autoscale m_rescaler[EAXIS_NUMB];
     QSignalMapper m_mapper;
 
@@ -190,7 +188,9 @@ public slots:
 
         pause();
 
-        m_frame.first()->
+        uint32_t global_sz = RT_GRAPH_ALLOC_DEFSZ / 2; //or exactly - 2*sizeof(t_rt_graph_v)*MAX_FREX_POINTS*histsz; //vertex
+        float *global =  m_frame.first()->alloc(global_sz);
+        t_3dcircbuf::resize(global_sz, global);
 
         sta.fs_out = frefresh;
         last_refresh = 0;
@@ -202,16 +202,25 @@ public slots:
 
     void rescale(int id){
 
-        QVector divs;
+        QVector<float> divs;  //divides of axis
         m_rescaler[id].read(divs, 1);  //update selected
 
-        trans[id].scale_lo = divs.first();
-        trans[id].scale_hi = divs.last();
+        trans[id].scale_lo = divs.first(); //min
+        trans[id].scale_hi = divs.last();  //max
 
-        QVector3d lo(trans[EAXIS_X].scale_lo, trans[EAXIS_Y].scale_lo, trans[EAXIS_Z].scale_lo);
-        QVector3d hi(trans[EAXIS_X].scale_hi, trans[EAXIS_Y].scale_hi, trans[EAXIS_Z].scale_hi);
+        QVector3D lo(trans[EAXIS_X].scale_lo, trans[EAXIS_Y].scale_lo, trans[EAXIS_Z].scale_lo);
+        QVector3D hi(trans[EAXIS_X].scale_hi, trans[EAXIS_Y].scale_hi, trans[EAXIS_Z].scale_hi);
 
-        m_frame.first()->update_orientation(lo, hi);  //recount matrix
+        //update all objects scale
+        //every object based on graph data
+        foreach(QMap<e_rt_graph_object, rt_graph_object *>::Iterator o, m_objects){
+
+            if(o.value().m_ver == /*nejaky vbo zarucene pochazejici z dat */){
+
+                o.value().translate(lo);  //recount matrix
+                o.value().scale(1/(hi.x - lo.x), 1/(hi.y - lo.y), 1/(hi.z - lo.z));
+            }
+        }
     }
 
 public:
@@ -228,7 +237,7 @@ public:
         QObject::connect(&m_mapper, SIGNAL(mapped(int)), this, SLOT(rescale(int));
         for(int a=0; a<(int)EAXIS_NUMB; a++){
 
-            m_rescaler[a].connect(this);
+            m_rescaler[a].attach(this);  //set source of data for each rescaler
             QObject::connect(&m_rescaler[a], SIGNAL(on_update()), &m_mapper, SLOT(map()));
             m_mapper.setMapping(&m_rescaler[a], a);
         }

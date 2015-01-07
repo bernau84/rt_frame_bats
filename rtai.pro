@@ -26,7 +26,9 @@ SOURCES += main.cpp\
     graphs/rt_graph.cpp \
     graphs/rt_ogl_context.cpp \
     graphs/rt_ogl_object.cpp \
-    graphs/rt_ogl_memory.cpp
+    graphs/rt_ogl_memory.cpp \
+    base/rt_basictypes.cpp \
+    base/rt_base.cpp
 
 HEADERS  += mainwindow.h\
 	freq_analysis.h\

@@ -47,7 +47,7 @@ private:
     GLuint              m_vbo[RT_VBO_N];  //vbo stack all for vertices, colors, indices
     rt_graph_object    *m_rto[RT_OBJ_N];  //framebuffer objects data
 
-    //new object is not copy into gpu memory unless it is not already
+    //new object is not copied into gpu memory unless it is not already
     //in cache. use of global memory is assumed!
     //only for floats (vertexes and colors)
 
@@ -88,8 +88,9 @@ public slots:
 
 public slots:
 
-    /*! \brief update vertex buffer with original buffer
+    /*! \brief update vertex buffer indices
      * selected object or all for NULL input
+     * the question is if its neccessary...may it can be done directly in render fce
      */
     void update(const rt_graph_object *o = NULL){
 
@@ -98,8 +99,8 @@ public slots:
 
                 m_context->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[i]);
                 m_context->glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                                        m_mem[i].sz,
-                                        m_mem[i].base,
+                                        m_rto[i]->m_size,
+                                        m_rto[i]->m_ind,
                                         GL_STATIC_DRAW);
             }
     }
@@ -179,7 +180,7 @@ public:
     */
     bool del(const rt_graph_object *o){
 
-        for(quint oi = 0; oi < RT_OBJ_N; oi += 1)
+        for(quint32 oi = 0; oi < RT_OBJ_N; oi += 1)
             if(m_rto[oi] == o){
 
                 delete m_rto[fpos];
@@ -200,6 +201,7 @@ public:
     }
 
     /*! \brief creates new object; if no free vbo than return NULL
+     * \param ver, col - pointer, size pair
     */
     rt_graph_object *from(e_rt_graph_obj_type ty,
                           QPair<const t_rt_graph_v *, quint32> &ver,
@@ -209,14 +211,17 @@ public:
         GLuint vbo_ver, vbo_col, vbo_ind;
         vbo_ver = vbo_col = vbo_ind = GL_INVALID_VALUE;
 
+        /*! \todo - velikosti sedet nemusi, pridano ale je to v poradku?! */
+
 #if defined (RT_OGL_ALLOCATOR_MEM == 0)
+
 
         for(int n=0; n<RT_VBO_N; n++){
 
-            if(ver.first == mem[n].base)
+            if((ver.first == mem[n].base) && (ver.second <= mem[n].sz))
                 vbo_ver = m_vbo[n];
 
-            if(col.first == mem[n].base)
+            if((col.first == mem[n].base) && (col.second <= mem[n].sz))
                 vbo_col = m_vbo[n];
 
             if((vbo_ver != GL_INVALID_VALUE) &&
