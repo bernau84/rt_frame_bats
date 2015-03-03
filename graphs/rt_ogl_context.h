@@ -5,6 +5,7 @@
 #include <QtGui/QOpenGLFunctions>
 #include <QtGui/QMatrix4x4>
 #include <QtGui/QOpenGLShaderProgram>
+#include <QtGui/QOpenGLPaintDevice>
 #include <QtGui/QScreen>
 
 

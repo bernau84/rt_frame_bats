@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTime>
 #include <QDir>
+#include <QVector>
 #include <QReadWriteLock>
 #include "rt_multibuffer.h"
 #include "rt_basictypes.h"
@@ -58,14 +59,10 @@ protected:
 
 public:
     t_rt_status sta;
-    t_collection set;
+    t_collection par;
 
-    explicit t_rt_empty(QObject *parent = 0, const QDir &resource = QDir()){
-
-        pre = NULL;
-        rd_i = -1;
-        rd_n = 0;
-    }
+    explicit t_rt_empty(QObject *parent = 0, const QDir &resource = QDir());
+    virtual ~t_rt_empty(){;}
 
     /*! \brief - connect data source to this object ( = backwards connection ) */
     int attach(t_rt_empty *nod){
@@ -131,7 +128,7 @@ public:
     /*! \brief - reading from index */
     const t_rt_ai read(int i){
 
-       i %= N; //prevent overrange index
+       i %= A.size(); //prevent overrange index
        t_rt_ai v = { A[i], I[i] };
        return v;
     }
@@ -139,7 +136,7 @@ public:
     const t_rt_ai last(){
 
        if(irecent < 0) irecent = 0;  //special case - not inited
-       int i = irecent % N; //prevent overrange index
+       int i = irecent % A.size(); //prevent overrange index
        t_rt_ai v = { A[i], I[i] };
        return v;
     }
@@ -171,24 +168,24 @@ public:
     }
 
     t_rt_slice(const t_rt_slice &d):
-        A(d.A), I(d.I), t(d.t), irecent(-1){;}
+        t(d.t), A(d.A), I(d.I), irecent(-1){;}
 
     t_rt_slice(T time = T(), int N = 0, T def = T()):
-        A(N, def), I(N), t(time), irecent(-1){;}
+        t(time), A(N, def), I(N), irecent(-1){;}
 };
 
 
 class rt_qt_lock {
 
 private:
-
     QReadWriteLock lock;
     virtual void lockRead(){ lock.lockForRead(); }
     virtual void lockWrite(){ lock.lockForWrite(); }
     virtual void unlock(){ lock.unlock(); }
 
+public:
     rt_qt_lock():lock(QReadWriteLock::NonRecursive){;}
-    ~rt_qt_lock(){;}
+    virtual ~rt_qt_lock(){;}
 };
 
 /*! \brief - encapsulation for multibuffer fixed number of readers
@@ -199,20 +196,26 @@ template <typename T> class t_slcircbuf : public t_multibuffer<T, RT_MAX_READERS
 private:
     rt_qt_lock lock;
 
-public:
+    /* typedef arrayListType<elemType> Parent; or this for non C++11
+     * otherway use 'using' keyword */
+    using t_multibuffer<T, RT_MAX_READERS>::buf;
+    using t_multibuffer<T, RT_MAX_READERS>::size;
+    using t_multibuffer<T, RT_MAX_READERS>::wmark;
+    using t_multibuffer<T, RT_MAX_READERS>::overflow;
+    using t_multibuffer<T, RT_MAX_READERS>::rmark;
 
+public:
     /*! \brief resize & reset */
     virtual void resize(int _size){
 
         //keeping data is not possible cause possition of rd/wr
         //pointers is unpredictible
-        if(buf)
-            delete[] buf;
+        if(buf) delete[] buf;
 
         buf = new T[size = _size];
 
         wmark = 0;
-        for(int i=0; i<N; i++){
+        for(int i=0; i<RT_MAX_READERS; i++){
 
             overflow[i] = -1;
             rmark[i] = 0;
@@ -233,13 +236,14 @@ public:
 /*! \brief - general precesor for all block proceeding data
  *  (must inherits the circularbuffer as data interface)
  */
-template <typename T> class t_rt_base : public t_rt_empty, t_slcircbuf<T>
+template <typename T> class t_rt_base : public t_rt_empty, public t_slcircbuf<T>
 {
     Q_OBJECT
 
 public:
     explicit t_rt_base(QObject *parent = 0, const QDir &resource = QDir()):
-        t_rt_empty(parent, resource){
+        t_rt_empty(parent, resource),
+        t_slcircbuf<T>(0){
 
     }
 

@@ -4,6 +4,7 @@ t_rt_empty::t_rt_empty(QObject *parent, const QDir &resource) :
     QObject(parent),
     set(__set_from_file(resource.absolutePath()))
 {
+
     sta.fs_in = (double *)0; //vstupni fs
     sta.fs_out = 0; //vystuni fs
     sta.state = t_rt_status::StoppedState;

@@ -131,6 +131,9 @@ public slots:
 
 };
 
+/*! \class rt_graph - embeds framebuffer, data autoscale, and all object
+ * \todo - support for multiple frames cancel (framebuffer is uselles for us)
+*/
 class rt_graph : public t_rt_graph_base
 {
     Q_OBJECT
@@ -139,6 +142,8 @@ private:
     int histsz; //how many time(x) samples we would keep
     int frefresh; //refresh frequency
     double last_refresh;  //timestamp
+    t_rt_graph_v *glmem;
+    int glmem_sz;
 
     struct {
         double scale_lo;
@@ -188,10 +193,6 @@ public slots:
 
         pause();
 
-        uint32_t global_sz = RT_GRAPH_ALLOC_DEFSZ / 2; //or exactly - 2*sizeof(t_rt_graph_v)*MAX_FREX_POINTS*histsz; //vertex
-        float *global =  m_frame.first()->alloc(global_sz);
-        t_3dcircbuf::resize(global_sz, global);
-
         sta.fs_out = frefresh;
         last_refresh = 0;
 
@@ -211,11 +212,10 @@ public slots:
         QVector3D lo(trans[EAXIS_X].scale_lo, trans[EAXIS_Y].scale_lo, trans[EAXIS_Z].scale_lo);
         QVector3D hi(trans[EAXIS_X].scale_hi, trans[EAXIS_Y].scale_hi, trans[EAXIS_Z].scale_hi);
 
-        //update all objects scale
-        //every object based on graph data
+        //update all objects scale - all object based on graph data
         foreach(QMap<e_rt_graph_object, rt_graph_object *>::Iterator o, m_objects){
 
-            if(o.value().m_ver == /*nejaky vbo zarucene pochazejici z dat */){
+            if(contains(glmem, o.value())){
 
                 o.value().translate(lo);  //recount matrix
                 o.value().scale(1/(hi.x - lo.x), 1/(hi.y - lo.y), 1/(hi.z - lo.z));
@@ -225,12 +225,20 @@ public slots:
 
 public:
 
+    void canvas(const rt_graph_context *win){
+
+        m_canvas = win;
+    }
+
     explicit rt_graph(QObject *parent = 0, const QDir &resource = QDir()):
         t_rt_graph_base(parent, resource),
-        m_canvas(new rt_graph_context(parent)),
         m_mapper(this)
     {
         m_frame << new rt_graph_frame(&m_canvas);
+
+        glmem_sz = RT_GRAPH_ALLOC_DEFSZ / 2; //or exactly - 2*sizeof(t_rt_graph_v)*MAX_FREX_POINTS*histsz; //vertex
+        glmem =  m_frame.first()->alloc(global_sz);
+        t_3dcircbuf::resize(glmem_sz, glmem);
 
         //connect update scale signal of particullar axis to graph
         //and uprade signal from graph to rescallers

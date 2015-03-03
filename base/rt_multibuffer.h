@@ -8,13 +8,13 @@
 
 class t_rt_lock {
 
-private:
-    virtual lockRead(){;}
-    virtual lockWrite(){;}
-    virtual unlock(){;}
+public:
+    virtual void lockRead(){;}
+    virtual void lockWrite(){;}
+    virtual void unlock(){;}
 
     t_rt_lock(){;}
-    ~t_rt_lock(){;}
+    virtual ~t_rt_lock(){;}
 };
 
 
@@ -42,7 +42,7 @@ template <typename T, int N> class t_multibuffer {
         int write(T &smp);  /*!< simple append (update write pointer), return 1 with success */
         int read(T &smp, int n = 0);  /*!< simple read (update read pointer), return 1 with success */
 
-        T get(int n = 0);  /*!< reads item on read pointer without it shift, return 1 if item avaiable */
+        T get(int n = 0);  /*!< reads item on read pointer without it shift */
         int set(T &smp);  /*!< re/write item on write pointer without it shift, return 1 if item avaiable */
 
         int shift(int len, int n = 0);     /*!< shift read pointer / dummy read = reflect overflow flag */
@@ -78,8 +78,7 @@ template <typename T, int N> class t_multibuffer {
 
         virtual ~t_multibuffer(){
 
-            if(buf)
-                delete[] buf;
+            if(buf) delete[] buf;
         }
 };
 
@@ -182,7 +181,7 @@ template <typename T, int N> int t_multibuffer<T, N>::readSpace(int n){
 //vycitani volneho mista z kruh bufferu ktery vyuziva cely prostor
 template <typename T, int N> int t_multibuffer<T, N>::writeSpace(int n){
 
-    lock.lockForWrite();
+    lock.lockWrite();
 
     int nn = n % N;
     int tmp = (int)(rmark[nn] - wmark);

@@ -2,11 +2,12 @@
 #include "mainwindow.h"
 #include <QObject>
 #include <QWidget>
+#include <QDebug>
 #include <QAudioInput>
 #include <QAudioDeviceInfo>
 #include <QPushButton>
-#include "rt_sources.h"
-#include "rt_analysis.h"
+#include "inputs\rt_sources.h"
+#include "analysis\rt_analysis.h"
 
 int main(int argc, char *argv[])
 {
@@ -19,10 +20,11 @@ int main(int argc, char *argv[])
 
     if(infos.count()){
 
-        t_rt_snd_card *aidev = new t_rt_snd_card(infos[8]); //berem prvni dobrou
-        t_rt_cpb *aicpb = new t_rt_cpb(aidev); //navazame na vzorkovac
+        t_rt_snd_card *aidev = new t_rt_snd_card(infos[0/*8*/]); //berem prvni dobrou
+        t_rt_shift *aibat = new t_rt_shift(); //navazame na vzorkovac
+        aibat->attach(aidev);
 
-        aicpb->start();
+        aibat->start();
         aidev->start(); //cele to odstartujem
     }
 

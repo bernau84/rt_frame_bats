@@ -31,7 +31,7 @@ enum e_rt_graph_obj_type {
  * factory patter & smart graph object and vbo sharing
  */
 
-class rt_graph_frame : public QOpenGLFramebufferObject {
+class rt_graph_frame /* : public QOpenGLFramebufferObject */ {
 
 private:
     rt_graph_context *m_context;  //ogl context + qwindow
@@ -90,7 +90,8 @@ public slots:
 
     /*! \brief update vertex buffer indices
      * selected object or all for NULL input
-     * the question is if its neccessary...may it can be done directly in render fce
+     * the question is if its neccessary - especialy for NULL parameter
+     * ...may it can be done directly in render fce
      */
     void update(const rt_graph_object *o = NULL){
 
@@ -144,6 +145,18 @@ public:
     quint32 free(GLfloat *p){
 
         return m_allocator.free(p);
+    }
+
+    /*! \brief test afinity vbo to buffer
+    */
+    bool contains(GLfloat *p, const rt_graph_object *o){
+
+        for(int n=0; n<RT_VBO_N; n++)
+            if(m_vbo[n] == o)
+                if(m_mem[n].base == p)
+                    return true;
+
+        return false;
     }
 
     /*! \brief define particular graph object, return id

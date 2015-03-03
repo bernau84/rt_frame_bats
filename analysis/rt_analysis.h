@@ -16,10 +16,10 @@ class t_rt_analysis : public t_rt_base<double>
 {
     Q_OBJECT
 
-public:
-
+protected:
     virtual void analyse(const t_rt_slice<double> &w) = 0;
 
+public:
     t_rt_analysis(QObject *parent, const QDir &config = QDir());
     virtual ~t_rt_analysis(){;}
 
@@ -34,16 +34,16 @@ public slots:
 
     virtual void process(){
 
-        t_slcircbuf *source = dynamic_cast<t_slcircbuf *>pre;
+        t_slcircbuf<t_rt_slice<double> > *source = dynamic_cast<t_slcircbuf<t_rt_slice<double> > *>(pre);
         if(!source) return; //navazujem na zdroj dat?
 
         t_rt_slice<double> w;  //radek casovych dat
-        while(source->t_slcircbuf::read(&w, rd_i)){ //vyctem radek
+        while(source->t_slcircbuf::read(w, rd_i)){ //vyctem radek
 
             if(sta.state != t_rt_status::ActiveState){
 
                 int n_dummy = source->t_slcircbuf::readSpace(rd_i); //zahodime data
-                source->t_slcircbuf::readShift(n_dummy, rd_i);
+                source->t_slcircbuf::shift(n_dummy, rd_i);
             } else {
 
                 analyse(w);
@@ -71,6 +71,8 @@ private:
 
     t_pFilter<double> *aline[RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE]; //analyticke pasmove filtry - max. pocet ukazatelu - to neboli
     t_pFilter<double> *aver[RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE]; //vystupni prumerovani
+
+    virtual void analyse(const t_rt_slice<double> &w);
 
 public slots:
 
@@ -101,6 +103,8 @@ private:
 
     t_pFilter<double> *bank[RT_MAX_BANDS_PER_OCTAVE];   //pasmova propust co se de posouvat
 
+    virtual void analyse(const t_rt_slice<double> &w);
+
 public slots:
     void process();
     void change();
@@ -108,7 +112,6 @@ public slots:
 public:
     t_rt_shift(QObject *parent = 0);
     virtual ~t_rt_shift();
-
 };
 
 
