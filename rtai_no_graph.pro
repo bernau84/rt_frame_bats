@@ -15,10 +15,7 @@ SOURCES += main.cpp\
         mainwindow.cpp\
         analysis/freq_analysis.cpp\
         analysis/rt_analysis.cpp\
-        sources/rt_sources.cpp\
-        baset_rt_base.cpp \
     outputs/rt_output.cpp \
-    base/t_rt_base.cpp \
     inputs/rt_sources.cpp \
     base/rt_basictypes.cpp \
     base/rt_base.cpp
@@ -26,7 +23,6 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h\
 	freq_analysis.h\
         analysis/rt_analysis.h\
-        sources/rt_sources.h\
         base/rt_basictypes.h \
     base/rt_multibuffer.h \
     outputs/rt_output.h \

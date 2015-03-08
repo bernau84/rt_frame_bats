@@ -2,17 +2,19 @@
 #define RT_OUTPUT_H
 
 #include <QObject>
+#include <QDebug>
 
-#include "base\t_rt_base.h"
-#include "inputs\rt_sources.h"
+#include "base\rt_base.h"
+#include "outputs\rt_output.h"
 #include <QAudioFormat>
 #include <QAudioOutput>
 
-class t_rt_output : public t_rt_base
+class t_rt_output : public t_rt_base<t_rt_slice<double> >
 {
     Q_OBJECT
 public:
     t_rt_output(QObject *parent, const QDir &resource = QDir());
+    virtual ~t_rt_output();
 };
 
 class t_rt_player : public t_rt_output

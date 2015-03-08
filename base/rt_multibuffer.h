@@ -63,7 +63,7 @@ template <typename T, int N> class t_multibuffer {
             return (overflow[n % N] > 0) ? 1 : 0;
         }
 
-        t_multibuffer(int _size, const t_rt_lock &_lock)  /*!< size is number of item, can work directly on p if int NULL */
+        t_multibuffer(int _size, t_rt_lock &_lock)  /*!< size is number of item, can work directly on p if int NULL */
             :size(_size), lock(_lock){
 
             buf = (T *) new T[size];

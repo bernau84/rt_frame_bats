@@ -165,33 +165,37 @@ void t_rt_shift::analyse(const t_rt_slice<double> &w){
 
     for(int i=0; i<w.A.size(); i++){
 
-        int dd;
-        double t_filt = bank[m]->Process(w.A[i], &dd);  //band pass & decimace
+        for(int m=0; m<decif; m++){
 
-        sta.nn_run += 1;
-        sta.nn_tot += 1;
+            int dd;
+            double t_filt = bank[m]->Process(w.A[i], &dd);  //band pass & decimace
 
-        if((dd == 0) && (mask & (1 << m))){ //z filtru vypadl decimovany vzorek ktery chcem
+            sta.nn_run += 1;
+            sta.nn_tot += 1;
 
-            if(m & 0x1) //mirroring u lichych pasem
-                t_filt *= -1;
+            if((dd == 0) && (mask & (1 << m))){ //z filtru vypadl decimovany vzorek ktery chcem
 
-            last.A += t_filt;  //scitame s prispevky od jinych filtru (pokud jsou vybrany)
-            last.I += 1;
-        }
+                if(m & 0x1) //mirroring u lichych pasem
+                    t_filt *= -1;
 
-        if(last.I == (decif-1)){  //mame hotovo (decimace D) vzorek muze jit ven
-
-            p_shift.set(last);
-            if((p_shift.A.size()) == refr) {
-
-                t_slcircbuf::write(p_shift); //zapisem novy jeden radek
-                t_slcircbuf::read(p_shift);
-                p_shift = t_rt_slice<double>(0.0, 1); //inicializace noveho spektra
+                last.A += t_filt;  //scitame s prispevky od jinych filtru (pokud jsou vybrany)
+                last.I += 1;
             }
 
-            last = t_rt_slice<double>::t_rt_ai(0.0, 0.0);
-            p_shift.append(last); //pripravim novy
+            if(last.I == (decif-1)){  //mame hotovo (decimace D) vzorek muze jit ven
+
+                p_shift.set(last);
+                if((p_shift.A.size()) == refr) {
+
+                    t_slcircbuf::write(p_shift); //zapisem novy jeden radek
+                    t_slcircbuf::read(p_shift);
+                    p_shift = t_rt_slice<double>(0.0, 1); //inicializace noveho spektra
+                }
+
+                t_rt_slice<double>::t_rt_ai empty = {0.0, 0.0};
+                last = empty;
+                p_shift.append(last); //pripravim novy
+            }
         }
     }
 

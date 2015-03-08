@@ -1,7 +1,7 @@
 #include "rt_output.h"
 
 t_rt_output::t_rt_output(QObject *parent, const QDir &resource) :
-    t_rt_base(parent, resource)
+    t_rt_base<t_rt_slice<double> >(parent, resource)
 {
 }
 
@@ -14,7 +14,7 @@ t_rt_player::t_rt_player(const QAudioDeviceInfo &out, QObject *parent):
     QList<int> qfrl = out.supportedSampleRates();
     foreach(int f, qfrl) jfrl.append(f);
     t_setup_entry fr(jfrl, "Hz");  //recent list
-    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
+    sta.fs_out = par["Rates"].get().toDouble();  //actual frequency
 
     output_io = 0;
     output_audio = 0;
@@ -68,35 +68,33 @@ void t_rt_player::process(){
     if(!output_io || !output_audio)
         return;
 
-    int M = set["Time"].get().toDouble() / 1000.0 * sta.fs_out;
+    int M = par["Time"].get().toDouble() / 1000.0 * sta.fs_out;
 
-    t_rt_base *pre = dynamic_cast<t_rt_base *>(parent());
+    t_slcircbuf<t_rt_slice<double> > *pre = dynamic_cast<t_slcircbuf<t_rt_slice<double> > *>(pre);
     if(!pre) return; //navazujem na zdroj dat?
 
-    t_rt_slice wrks; //pracovni radek v multibufferu
-    d->get(wrks);  //vyctem
+    t_rt_slice<double> wrks = t_slcircbuf::get(); //pracovni radek v multibufferu vyctem
 
     int scale = 1 << (format.sampleSize()-1);  //mame to v signed proto -1
 
-    t_rt_slice t_amp;  //radek casovych dat
-    while(pre->t_slcircbuf::read(&t_amp, rd_i)){ //vyctem radek
+    t_rt_slice<double> t_amp;  //radek casovych dat
+    while(pre->t_slcircbuf::read(t_amp, rd_i)){ //vyctem radek
 
         if(sta.state == t_rt_status::ActiveState){
 
             qint64 avaiable_l = output_audio->bytesFree();
-            if(avaiable_l < t_amp.avail){ ; }  /*! \todo - !!nestihame prehravat --> zahazujem vzorky */
-            else if(avaiable_l > t_amp.avail) avaiable_l = t_amp.avail;  //stihame; staci nam jen prostor na jeden radek
 
             short local_samples[avaiable_l];  //vycteni dostupneho
             for(int i=0; i < avaiable_l; i++){  //konverze do shortu a zapis
 
-                local_samples[i] = t_amp.v[i].A * scale;
-                wrks.v << t_rt_slice::t_rt_ai(sta.fs_out/2, local_samples[i]); //vkladame cas kazdeho vzorku
-                if(wrks.v.size() == M){
+                local_samples[i] = t_amp.A[i] * scale;
+                t_rt_slice<double>::t_rt_ai s = {sta.fs_out/2, local_samples[i]};
+                wrks.append(s); //vkladame cas kazdeho vzorku
+                if(wrks.A.size() == M){
 
                     t_slcircbuf::write(wrks); //zapisem novy jeden radek
                     t_slcircbuf::read(wrks);
-                    wrks = t_rt_slice(sta.nn_tot / *sta.fs_in); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
+                    wrks = t_rt_slice<double>(sta.nn_tot / *sta.fs_in); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
                 }
 
                 sta.nn_tot += 1;
@@ -157,17 +155,17 @@ void t_rt_player::change(){
         return; //tak to neklaplo - takovy format nemame
     }
 
-    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
-    int N = set["Multibuffer"].get().toDouble();
-    int M = set["Time"].get().toDouble() / 1000.0 * sta.fs_out;
+    sta.fs_out = par["Rates"].get().toDouble();  //actual frequency
+    int N = par["Multibuffer"].get().toDouble();
+    int M = par["Time"].get().toDouble() / 1000.0 * sta.fs_out;
 
     t_slcircbuf::resize(M); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
-    t_rt_slice dfs(0);
+    t_rt_slice<double> dfs(0);
     t_slcircbuf::set(dfs);
 
-    int mmrt = set["__refresh_rate"].get().toDouble() * sta.fs_out * 1000;
+    int mmrt = par["__refresh_rate"].get().toDouble() * sta.fs_out * 1000;
     output_audio->setNotifyInterval(mmrt); //v ms
     connect(output_audio, SIGNAL(notify()), SLOT(process()));
     connect(output_audio, SIGNAL(stateChanged(QAudio::State)), SLOT(change_audio_state(QAudio::State)));   //s chybou prechazi AudioInput do stavi Stopped

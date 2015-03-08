@@ -175,7 +175,7 @@ public:
 };
 
 
-class rt_qt_lock {
+class rt_qt_lock : public t_rt_lock{
 
 private:
     QReadWriteLock lock;
@@ -224,7 +224,7 @@ public:
 
     t_slcircbuf(int _size):
         lock(),
-        t_multibuffer<T, RT_MAX_READERS>(_size, &lock){
+        t_multibuffer<T, RT_MAX_READERS>(_size, lock){
 
     }
 

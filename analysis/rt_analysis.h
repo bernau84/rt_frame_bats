@@ -12,7 +12,7 @@
 #define RT_MAX_OCTAVES_NUMBER      20
 #define RT_MAX_BANDS_PER_OCTAVE    24
 
-class t_rt_analysis : public t_rt_base<double>
+class t_rt_analysis : public t_rt_base<t_rt_slice<double> >
 {
     Q_OBJECT
 
