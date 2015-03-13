@@ -122,11 +122,11 @@ public:
 
 public slots:
     virtual void start(){
-        t_rt_base::start();
+        i_rt_base::start();
     }
 
     virtual void stop(){
-        t_rt_base::stop();
+        i_rt_base::stop();
     }
 
 };

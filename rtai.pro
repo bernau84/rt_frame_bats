@@ -21,20 +21,20 @@ SOURCES += main.cpp\
     graphs/rt_window.cpp \
     graphs/rt_graph_scaler.cpp \
     graphs/rt_graph_colormap.cpp \
-    base/t_rt_base.cpp \
+    base/i_rt_base.cpp \
     inputs/rt_sources.cpp \
     graphs/rt_graph.cpp \
     graphs/rt_ogl_context.cpp \
     graphs/rt_ogl_object.cpp \
     graphs/rt_ogl_memory.cpp \
     base/rt_basictypes.cpp \
-    base/rt_base.cpp
+    base/rt_base.cpp \
+    base/rt_dataflow.cpp
 
 HEADERS  += mainwindow.h\
 	freq_analysis.h\
         analysis/rt_analysis.h\
         sources/rt_sources.h\
-        base/rt_basictypes.h \
     base/rt_multibuffer.h \
     outputs/rt_output.h \
     graphs/rt_graph_scaler.h \
@@ -49,7 +49,9 @@ HEADERS  += mainwindow.h\
     base/rt_base.h \
     analysis/freq_filtering.h \
     analysis/rw_buffer.h \
-    analysis/freq_analysis.h
+    analysis/freq_analysis.h \
+    base/rt_setup.h \
+    base/rt_dataflow.h
 
 FORMS    += mainwindow.ui
 

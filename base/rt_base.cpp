@@ -37,7 +37,7 @@ int t_rt_empty::subscriber(t_rt_empty *next){
     connect(this, SIGNAL(on_change()), next, SLOT(change()));  //reakce na zmeny nastaveni, chyby, zmeny rezimu
     connect(this, SIGNAL(on_update()), next, SLOT(process())); //reakce na nova data
 
-    t_slcircbuf::shift(t_slcircbuf::readSpace(rd_n), rd_n); //reset rd_cntr tak aby byl pripraven
+
     next->sta.fs_in = &sta.fs_out; //napojim info o vzorkovacich frekv.
     return rd_n++;  //dalsi pijavice
 }

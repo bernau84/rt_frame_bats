@@ -98,17 +98,17 @@ on_update:
 public slots:
     void start(){
         /*! autoscale on */
-        t_rt_base::start();
+        i_rt_base::start();
     }
 
     void pause(){
         /*! autroscale off, freeze actual scale */
-        t_rt_base::pause();
+        i_rt_base::pause();
     }
 
     void resume(){
         /*! autroscale off, freeze actual scale */
-        t_rt_base::resume();
+        i_rt_base::resume();
     }
 
     void process(){

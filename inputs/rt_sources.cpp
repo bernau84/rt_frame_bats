@@ -1,9 +1,10 @@
 #include "rt_sources.h"
-#include "..\base\rt_basictypes.h"
+#include "../base/rt_dataflow.h"
+
 #include <QtDebug>
 
 t_rt_source::t_rt_source(QObject *parent, const QDir &resource):
-    t_rt_base(parent, resource)
+    i_rt_fp_base(parent, resource)
 {
 }
 
@@ -32,7 +33,7 @@ t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
 
 void t_rt_snd_card::start(){
 
-    t_rt_base::start();
+    i_rt_base::start();
 
     if(input_audio)
         switch(input_audio->state()){
@@ -55,7 +56,7 @@ void t_rt_snd_card::start(){
 
 void t_rt_snd_card::pause(){
 
-    t_rt_base::pause();
+    i_rt_base::pause();
 
     if(input_audio)
         switch(input_audio->state()){

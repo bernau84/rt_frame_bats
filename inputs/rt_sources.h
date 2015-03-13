@@ -1,12 +1,12 @@
 #ifndef RT_SOURCES_H
 #define RT_SOURCES_H
 
-#include "base/rt_basictypes.h"
-#include "base/rt_base.h"
+#include "../base/rt_dataflow.h"
+#include "../base/rt_base.h"
 #include <QAudioFormat>
 #include <QAudioInput>
 
-class t_rt_source : public t_rt_base<double> //, public QThread
+class t_rt_source : public i_rt_fp_base //, public QThread
 {
     Q_OBJECT
 public:

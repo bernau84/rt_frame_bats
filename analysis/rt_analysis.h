@@ -3,7 +3,7 @@
 
 #include <QList>
 
-#include "base\rt_basictypes.h"
+#include "base\rt_doublebuffer.h"
 #include "base\rt_base.h"
 #include "inputs\rt_sources.h"
 #include "freq_analysis.h"
@@ -12,52 +12,49 @@
 #define RT_MAX_OCTAVES_NUMBER      20
 #define RT_MAX_BANDS_PER_OCTAVE    24
 
-class t_rt_analysis : public t_rt_base<t_rt_slice<double> >
+/*! \brief - interface for other sliced floating point analysis items in rt network */
+class i_rt_fp_analysis : public i_rt_fp_base // == circ buffer of t_rt_slice<double>
 {
     Q_OBJECT
 
 protected:
-    virtual void analyse(const t_rt_slice<double> &w) = 0;
+     virtual void analyse(const t_rt_slice<double>) = 0;
 
 public:
-    t_rt_analysis(QObject *parent, const QDir &config = QDir());
-    virtual ~t_rt_analysis(){;}
+    i_rt_fp_analysis(QObject *parent, const QDir &config = QDir());
+    virtual ~i_rt_fp_analysis(){;}
 
 public slots:
     virtual void start(){
-        t_rt_base::start();
+        i_rt_base::start();
     }
 
     virtual void stop(){
-        t_rt_base::stop();
+        i_rt_base::stop();
     }
 
     virtual void process(){
 
-        t_slcircbuf<t_rt_slice<double> > *source = dynamic_cast<t_slcircbuf<t_rt_slice<double> > *>(pre);
-        if(!source) return; //navazujem na zdroj dat?
+        /*! ommits pre validation cause it should be granted
+         * by restrictions in attach() method */
 
-        t_rt_slice<double> w;  //radek casovych dat
-        while(source->t_slcircbuf::read(w, rd_i)){ //vyctem radek
+        t_rt_slice<double> A;  //radek casovych dat
+        while(pre->read<t_rt_slice<double> >(A, rd_i)){ //vyctem radek
 
             if(sta.state != t_rt_status::ActiveState){
 
                 int n_dummy = source->t_slcircbuf::readSpace(rd_i); //zahodime data
-                source->t_slcircbuf::shift(n_dummy, rd_i);
+                pre->shift(n_dummy, rd_i);
             } else {
 
-                analyse(w);
+                analyse(A);
             }
         }
     }
-
-    virtual void change(){
-
-    }
-
 };
 
-class t_rt_cpb : public t_rt_analysis
+
+class t_rt_cpb : public i_rt_fp_analysis
 {
     Q_OBJECT
 
@@ -91,7 +88,7 @@ public:
  * pocitaji se vsechna pasma (multifazove)
  * s tim ze na vystup se mixuji vybrana
  */
-class t_rt_shift : public t_rt_analysis
+class t_rt_shift : public i_rt_fp_analysis
 {
     Q_OBJECT
 

@@ -4,11 +4,12 @@
 #include <QObject>
 #include <QTime>
 #include <QDir>
-#include <QVector>
-#include <QReadWriteLock>
-#include "rt_multibuffer.h"
-#include "rt_basictypes.h"
+#include <QSignalMapper>
 
+#include "rt_setup.h"
+#include "rt_dataflow.h"
+
+/*! \brief - commond state variables for any rt item */
 class t_rt_status {
 
 public:
@@ -30,8 +31,13 @@ public:
     } warnings;
 };
 
+/*! symnames for floating point dataflow buffers */
+typedef rt_dataflow_circ_simo_tfslices<double> t_sl_fpcbuf;
+typedef rt_dataflow_circ_simo_double<double> t_fpdbuf;
 
-#define RT_MAX_READERS   6
+/*! \note implemenation of alternative form of node datatype
+ * has to begin at 'rt_base' */
+
 
 /*! \brief - implement interconnection and status logic
  * as well as support for json configuration */
@@ -64,15 +70,6 @@ public:
     explicit t_rt_empty(QObject *parent = 0, const QDir &resource = QDir());
     virtual ~t_rt_empty(){;}
 
-    /*! \brief - connect data source to this object ( = backwards connection ) */
-    int attach(t_rt_empty *nod){
-
-        if((pre = nod) != NULL)
-            rd_i = pre->subscriber(this);
-
-        return rd_i;
-    }
-
 signals:
     void on_update();   //zmena zvnejsi - signal vede na slot change
     void on_change();  //propagace zmeny zevnitr k navazanym prvkum
@@ -102,190 +99,135 @@ public slots:
 
 
 
-template <class T> class t_rt_slice {
 
-private:
-    int irecent;  //last write index - -1 unitialized, 0 - first valid
-
-public:
-
-    T          t;  //time mark of this slice
-    QVector<T> A;  //amplitude
-    QVector<T> I;  //index / frequency
-
-    //some useful operators on <A, I> pair
-    typedef struct {
-
-        T A;
-        T I;
-    } t_rt_ai;
-
-    /*! \brief - test */
-    bool isempty(){
-
-       return (irecent < A.size()) ? true : false;
-    }
-    /*! \brief - reading from index */
-    const t_rt_ai read(int i){
-
-       i %= A.size(); //prevent overrange index
-       t_rt_ai v = { A[i], I[i] };
-       return v;
-    }
-    /*! \brief - read last written */
-    const t_rt_ai last(){
-
-       if(irecent < 0) irecent = 0;  //special case - not inited
-       int i = irecent % A.size(); //prevent overrange index
-       t_rt_ai v = { A[i], I[i] };
-       return v;
-    }
-    /*! \brief - set last written */
-    void set(const t_rt_ai &v){
-
-        if(irecent < 0) irecent = 0; //special case - not inited
-        A[irecent] = v.A;
-        I[irecent] = v.I;
-    }
-    /*! \brief - writing, returns number of remaining positions */
-    int append(const t_rt_ai &v){
-
-       if(++irecent < A.size()){
-
-           A[irecent] = v.A;
-           I[irecent] = v.I;
-       }
-
-       return (A.size() - irecent);
-    }
-
-    t_rt_slice &operator= (const t_rt_slice &d){
-
-        A = QVector<T>(d.A);
-        I = QVector<T>(d.I);
-        t = d.t;
-        irecent = -1;
-    }
-
-    t_rt_slice(const t_rt_slice &d):
-        t(d.t), A(d.A), I(d.I), irecent(-1){;}
-
-    t_rt_slice(T time = T(), int N = 0, T def = T()):
-        t(time), A(N, def), I(N), irecent(-1){;}
-};
-
-
-class rt_qt_lock : public t_rt_lock{
-
-private:
-    QReadWriteLock lock;
-    virtual void lockRead(){ lock.lockForRead(); }
-    virtual void lockWrite(){ lock.lockForWrite(); }
-    virtual void unlock(){ lock.unlock(); }
-
-public:
-    rt_qt_lock():lock(QReadWriteLock::NonRecursive){;}
-    virtual ~rt_qt_lock(){;}
-};
-
-/*! \brief - encapsulation for multibuffer fixed number of readers
-typedef is unusable in this case
-*/
-template <typename T> class t_slcircbuf : public t_multibuffer<T, RT_MAX_READERS>{
-
-private:
-    rt_qt_lock lock;
-
-    /* typedef arrayListType<elemType> Parent; or this for non C++11
-     * otherway use 'using' keyword */
-    using t_multibuffer<T, RT_MAX_READERS>::buf;
-    using t_multibuffer<T, RT_MAX_READERS>::size;
-    using t_multibuffer<T, RT_MAX_READERS>::wmark;
-    using t_multibuffer<T, RT_MAX_READERS>::overflow;
-    using t_multibuffer<T, RT_MAX_READERS>::rmark;
-
-public:
-    /*! \brief resize & reset */
-    virtual void resize(int _size){
-
-        //keeping data is not possible cause possition of rd/wr
-        //pointers is unpredictible
-        if(buf) delete[] buf;
-
-        buf = new T[size = _size];
-
-        wmark = 0;
-        for(int i=0; i<RT_MAX_READERS; i++){
-
-            overflow[i] = -1;
-            rmark[i] = 0;
-        }
-    }
-
-    t_slcircbuf(int _size):
-        lock(),
-        t_multibuffer<T, RT_MAX_READERS>(_size, lock){
-
-    }
-
-    virtual ~t_slcircbuf(){
-
-    }
-};
-
-/*! \brief - general precesor for all block proceeding data
- *  (must inherits the circularbuffer as data interface)
+/*! \brief - general interface for all block proceeding data
+ *  inherits data and signal interface
  */
-template <typename T> class t_rt_base : public t_rt_empty, public t_slcircbuf<T>
+class i_rt_base : public t_rt_empty, public virtual i_rt_dataflow
 {
     Q_OBJECT
-
 public:
-    explicit t_rt_base(QObject *parent = 0, const QDir &resource = QDir()):
-        t_rt_empty(parent, resource),
-        t_slcircbuf<T>(0){
 
+    virtual ~i_rt_base(){;}
+    explicit i_rt_base(QObject *parent = 0, const QDir &resource = QDir()):
+        i_rt_dataflow(),
+        t_rt_empty(parent, resource)
+    {
     }
 
-    virtual ~t_rt_base(){;}
+    /*! \brief - connect data source to this object ( = backwards connection )
+     * should be repaced by more specific type of rt_base which ensures compatibility od dataflow
+    */
+protected:
+    int attach(i_rt_base *nod){
+
+        if((pre = nod) != NULL)
+            rd_i = pre->subscriber(this);
+
+        /*! \warning - somehow read out buffered data - prevent overload new item */
+
+        return rd_i;
+    }
 
 public slots:
+    //pure virtual from rt_empty
     virtual void process() = 0;
     virtual void change() = 0;
 };
 
+/*! \brief - general interface floating point 2D multibuffer items
+ */
+class i_rt_fp_base : public i_rt_base, public virtual t_sl_fpcbuf {
 
-/*! \brief - implementation of junction nod
- *  concept - encapsule as many t_rt_collate subnod under one t_rt_base
- * as many inputs needs to be collated
-*/
-template <typename T__to> class t_rt_collate : public t_rt_empty
-{
     Q_OBJECT
-private:
-    t_slcircbuf<T__to> *dest;
-
-    template <typename T__from> void convert(QVector<T__from> v){
-        //copy data into given multibuffer
-        //multibuffer has to be locked!
-        /*! \todo - copy value by value with implicit retype to T__to */
-    }
 public:
-    explicit t_rt_collate(t_slcircbuf<T__to> *destbuf, QObject *parent = 0, const QDir &resource = QDir()):
-        t_rt_empty(parent, resource),
-        dest(destbuf)
-    {
 
+    virtual ~i_rt_fp_base(){;}
+    explicit i_rt_fp_base(QObject *parent = 0, const QDir &resource = QDir()):
+        t_sl_fpcbuf(0),
+        t_rt_empty(parent, resource)
+    {
+    }
+
+public:
+    /*! \brief - connect data to source of the same type & reset read buffer
+     * this ensures compatibility and errors in runtime typecasting
+    */
+    int attach(i_rt_fp_base *nod){
+
+        pre = NULL; /*! \todo - call some 'pre' uregistration instead */
+
+        i_rt_base::attach(nod);  //set/update rd_i (subscriber number) and pre
+
+        if(!pre) return -1; //error
+
+        //read out buffered data - prevent overload new item
+        t_rt_slice<double> dm;
+            for(int n=0; n<pre->readSpace(rd_i); n++)
+                pre->read<t_rt_slice<double> >(&dm, rd_i);
+
+        return rd_i;
+    }
+
+    /*! \todo - jak podporovat jine zdroje dat?
+     * muzem pouzit dynamickou identifikaci typu pomoci qt nebo std
+     * ale to asi neni moc elegantni
+    */
+};
+
+/*! \brief - implementation of multi-input nod interface
+ * do not care what we will do with signals from source but
+ * suport source identification - use combination nod[no] and rd_i[no] do for data manipulation
+ * in process, change slot respectively
+ *
+ * usage for logger from several source, or merging data for vizualization
+ */
+class i_rt_fp_collateral : public i_rt_fp_base
+
+    Q_OBJECT
+
+private:
+    QSignalMapper map_upd; //urci z jakeho zdroje prichazi update signal/change
+    QSignalMapper map_chn;
+
+protected:
+    QList<int>          rd_i_list;  //seznam prirazenych subcriber cisel
+    QList<i_rt_fp_base> pre_list;   //seznam zdroju
+
+public:
+    virtual ~i_rt_fp_collate(){;}
+    explicit i_rt_fp_collate(QObject *parent = 0):
+        i_rt_fp_base(parent),
+        cdata(0),
+        map_upd(this),
+        map_chn(this)
+    {
+        connect(map_upd, SIGNAL(mapped(int)), this, SLOT(process(int)));
+        connect(map_chn, SIGNAL(mapped(int)), this, SLOT(change(int)));
+    }
+
+    /*! \brief - connect data to another source of the same type */
+    int attach(i_rt_fp_base *nod){
+
+        i_rt_fp_base::attach(nod);  //set/update rd_i (subscriber number) and pre
+        if(!pre) return -1; //error
+
+        connect(nod, SIGNAL(process()), map_upd, SLOT(map()));
+        map_upd.setMapping(nod, rd_i_list.size());  //create junction between order and source
+        connect(nod, SIGNAL(process()), map_chn, SLOT(map()));
+        map_chn.setMapping(nod, pre_list.size());  //create junction between order and source
+
+        rd_i_list << rd_i; //add new subs.no. + update size
+        pre_list << pre; //add new source
+        return rd_i;
     }
 
 public slots:
-    void process(){
-        /*! \todo - call convert*/
-    }
+    virtual void process(int no) = 0; //nod[no], rd_i[no]
+    virtual void change(int no) = 0;
 
-    void change(){
-
-    }
+    void process(){;} //dummy - just for compatibility
+    void change(){;}
 
 };
 

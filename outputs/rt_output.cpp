@@ -1,7 +1,7 @@
 #include "rt_output.h"
 
 t_rt_output::t_rt_output(QObject *parent, const QDir &resource) :
-    t_rt_base<t_rt_slice<double> >(parent, resource)
+    i_rt_base<t_rt_slice<double> >(parent, resource)
 {
 }
 

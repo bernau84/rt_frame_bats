@@ -1,9 +1,9 @@
 #include "rt_analysis.h"
-#include "base\rt_basictypes.h"
+#include "base\rt_dataflow.h"
 
 //---------------------------------------------------------------------------
-t_rt_analysis::t_rt_analysis(QObject *parent, const QDir &config):
-    t_rt_base(parent, config)
+i_rt_analysis::i_rt_analysis(QObject *parent, const QDir &config):
+    i_rt_base(parent, config)
 {
 
 }
@@ -11,7 +11,7 @@ t_rt_analysis::t_rt_analysis(QObject *parent, const QDir &config):
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 t_rt_cpb::t_rt_cpb(QObject *parent):
-    t_rt_analysis(parent, QDir(":/config/js_config_cpbanalysis.txt"))
+    i_rt_analysis(parent, QDir(":/config/js_config_cpbanalysis.txt"))
 {
     double decif[1024], passf[1] = {1.0};
 
@@ -152,7 +152,7 @@ void t_rt_cpb::change(){
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 t_rt_shift::t_rt_shift(QObject *parent):
-    t_rt_analysis(parent, QDir(":/config/js_config_freqshift.txt"))
+    i_rt_analysis(parent, QDir(":/config/js_config_freqshift.txt"))
 {
     change(); //doinicializuje analyticke pasmove filtry a delay line
 }

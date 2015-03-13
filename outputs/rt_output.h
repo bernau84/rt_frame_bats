@@ -9,7 +9,7 @@
 #include <QAudioFormat>
 #include <QAudioOutput>
 
-class t_rt_output : public t_rt_base<t_rt_slice<double> >
+class t_rt_output : i_rt_fp_base
 {
     Q_OBJECT
 public:
