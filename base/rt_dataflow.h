@@ -172,7 +172,7 @@ public:
 /*! \brief tempate class of data storage suitable for rt_base
  * circular, single input multi output (multireader), time-frequency slices as elements
  */
-template <class T> class rt_dataflow_circ_simo_tfslices<T> : public i_rt_dataflow
+template <class T> class rt_dataflow_circ_simo_tfslices<T> : public virtual i_rt_dataflow
 {
 private:
     t_slcircbuf<T> data;
@@ -203,7 +203,7 @@ public:
  * circular, single input multi output (multireader), double buffer wit no need for warapped copy on read acceess
  */
 
-template <class T> class rt_dataflow_circ_simo_double<T> : public i_rt_dataflow
+template <class T> class rt_dataflow_circ_simo_double<T> : public virtual i_rt_dataflow
 {
 private:
     rt_qt_lock lock;

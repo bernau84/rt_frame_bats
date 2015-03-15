@@ -179,7 +179,7 @@ public:
     }
 };
 
-/*! \class list of JSonObject as attrbutes presendet outside as t_setup_enty item
+/*! \class list of JSonObject as attributes preset outside as t_setup_enty item
  * list of object is hidden as private, read must be done via ask,
  * write via udate
  * \warning adding entry is not allowed in user space
@@ -204,6 +204,7 @@ public:
         /*! update all keys version */
         *ai = attribute;
     }
+
 
     /*! \brief access/test attribute
     */
