@@ -109,7 +109,7 @@ public:
     //connect node to source and register node at source
     virtual void attach(rt_node *to){
 
-        t_rt_empty::attach(to);
+        rt_emptynode::attach(to);
         to->subscriber(this);
     }
 

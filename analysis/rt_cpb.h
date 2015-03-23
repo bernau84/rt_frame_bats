@@ -13,7 +13,7 @@ template <typename T> class t_rt_cpb_te : public i_rt_sl_csimo_te<T>
 {
 
 private:
-    int gd;    /*! groupdelay */
+    int gd;    /*! groupdelay */F
     int octn;  /*! number of octaves */
     int octm;  /*! number of bands in one octave */
 

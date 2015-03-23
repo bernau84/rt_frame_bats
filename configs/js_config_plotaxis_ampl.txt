@@ -1,0 +1,37 @@
+
+{
+    "Grain": {
+        "__info": "as-is/abs/log/dB/square (todo user math qt script expresion)",
+        "__def": "",
+        "abs": 1,
+        "log": 2,
+        "dB": 3,
+        "square": 4
+    },
+    "Range": {
+        "__info": "min/max/auto",
+        "__def": [0.0, 0.0],
+        "auto": [0.0, 0.0]
+    },
+    "Dynamic": {
+        "__info": "autorange speed (sec)",
+        "__def": 0.0,
+        "slow": 10.0,
+	"normal:" 1.0,
+	"normal:" 0.2,
+	"instant:" 0.0
+    },
+    "Color": {
+        "__info": "pallete (points between min 0.0 max 1.0)",
+        "__def": [[0.0, "#2040FF"], [1.0, "#2040FF"]],
+        "red":  [[0.0, "#000000"], [1.0, "#FF0000"]],
+        "green": [[0.0, "#000000"], [1.0, "#00FF00"]],
+        "blue": [[0.0, "#000000"], [1.0, "#0000FF"]],
+        "white": [[0.0, "#000000"], [1.0, "#FFFFFF"]],
+        "dark": [[0.0, "#FFFFFF"], [1.0, "#000000"]]
+    },
+    "Label": {
+        "__info": "axis description",
+        "__def": ""
+    }
+}

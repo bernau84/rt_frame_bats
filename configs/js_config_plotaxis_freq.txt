@@ -1,0 +1,24 @@
+
+{
+    "Base": {
+        "__info": "normal/logaritm base",
+        "__def": 0,
+        "linear": 0,
+        "logaritmic": 10,
+    },
+    "Range": {
+        "__info": "min/max/auto",
+        "__def": [0.0, 0.0],
+        "auto": [0.0, 0.0],
+    },
+    "Label": {
+        "__info": "freq axis description",
+        "__def": "",
+        "band": "band no.",
+        "Hz": "f[Hz]",
+    },
+    "Color": {
+        "__info": "freq axis pallete (2 point at colorspace)",
+        "__def": ["#FFFFFF", "#FFFFFF"],
+    }
+}

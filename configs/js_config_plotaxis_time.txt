@@ -1,0 +1,19 @@
+
+{
+    "Range": {
+        "__info": "min/max/auto",
+        "__def": [0.0, 0.0],
+        "auto": [0.0, 0.0],
+    },
+    "Color": {
+        "__info": "Pallete (2 point at colorspace)",
+        "__def": ["#EFEFEF", "#EFEFEF"],
+    },
+    "Label": {
+        "__info": "freq axis description",
+        "__def": "",
+        "sec": "s"
+        "msec": "ms"
+        "1/fs": "1/fs"
+    }
+}

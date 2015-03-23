@@ -15,7 +15,7 @@ typedef rt_dataflow_circ_simo_tfslices<double> t_sl_fpcbuf;
 typedef rt_dataflow_circ_simo_double<double> t_fpdbuf;
 
 
-/*! \brief - interface for working & non-qt-signaling content of rt node
+/*! \brief - interface for execution content of rt node
  * adds setup support
 */
 class i_rt_base
@@ -40,27 +40,20 @@ protected:
         return QJsonObject();
     }
 
-    QJsonObject __set_from_binary(const QByteArray path){
+    QJsonObject __set_from_binary(const QByteArray _path){
         /*! \todo - from JsonDocument binary of from remote data */
-        path = path;
+        path = _path;
         return QJsonObject();
     }
 
-    //processing functions
-    /*! \brief set new reader ( = forward connection ) */
-    virtual int subscriber(i_rt_dataflow *nod){;}
+public:
+
     /*! \brief data to analyse/process */
-    virtual void update() = 0;
-    /*! \brief someone changed setup or imput parameters */
+    virtual void update(const void *dt, int size) = 0;
+    /*! \brief someone changed setup or input signal property (sampling frequency for example) */
     virtual void change() = 0;
-
-    //receive callbacks
-    /*! \brief conversion from interface to data array - has to be done in
-     ancestor because here ve dont know the type for read template function */
-    virtual void update_notif(i_rt_dataflow &src){;}
-
-    /*! \brief merge of recent and new setup and fire the notification  */
-    virtual void change_notif(QMap<QString, QVariant> &npar){
+    /*! \bries merge of recent and new setup */
+    virtual void setup(QMap<QString, QVariant> &npar){
 
         foreach(QMap<QString, QVariant>::iterator nval, npar){
 
@@ -74,12 +67,6 @@ protected:
 
         change();
     }
-
-    //output callbacks
-    virtual void update_clb(i_rt_dataflow &s){;}
-    virtual void change_clb(){;}
-
-public:
     virtual ~i_rt_base();
     i_rt_base(const QDir &resource = QDir()):
         par(__set_from_file(resource.absolutePath())){
