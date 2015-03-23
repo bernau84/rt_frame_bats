@@ -1,14 +1,11 @@
 #include "rt_output.h"
 
-t_rt_output::t_rt_output(QObject *parent, const QDir &resource) :
-    i_rt_base<t_rt_slice<double> >(parent, resource)
-{
-}
-
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 t_rt_player::t_rt_player(const QAudioDeviceInfo &out, QObject *parent):
-    t_rt_output(parent, QDir(":/config/js_config_sndsink.txt")), output_dev(out)
+    rt_node(parent),
+    t_rt_output(parent, QDir(":/config/js_config_sndsink.txt")),
+    output_dev(out)
 {
     QJsonArray jfrl;  //conversion
     QList<int> qfrl = out.supportedSampleRates();
@@ -24,6 +21,8 @@ t_rt_player::t_rt_player(const QAudioDeviceInfo &out, QObject *parent):
 
 
 void t_rt_player::start(){
+
+    rt_node::start();
 
     if(output_audio)
         switch(output_audio->state()){
@@ -44,7 +43,9 @@ void t_rt_player::start(){
         }
 }
 
-void t_rt_player::pause(){
+void t_rt_player::stop(){
+
+    rt_node::stop();
 
     if(output_audio)
         switch(output_audio->state()){
@@ -63,37 +64,31 @@ void t_rt_player::pause(){
 
 /*! \brief - konvertuje vzorky do formatu prehravace, sype to do nej a ty ktere stiha
  * prehrat presypava do multibufferu */
-void t_rt_player::process(){
+void t_rt_player::update(const void *dt, int size){
 
     if(!output_io || !output_audio)
         return;
 
-    int M = par["Time"].get().toDouble() / 1000.0 * sta.fs_out;
-
-    t_slcircbuf<t_rt_slice<double> > *pre = dynamic_cast<t_slcircbuf<t_rt_slice<double> > *>(pre);
-    if(!pre) return; //navazujem na zdroj dat?
-
-    t_rt_slice<double> wrks = t_slcircbuf::get(); //pracovni radek v multibufferu vyctem
-
     int scale = 1 << (format.sampleSize()-1);  //mame to v signed proto -1
 
-    t_rt_slice<double> t_amp;  //radek casovych dat
-    while(pre->t_slcircbuf::read(t_amp, rd_i)){ //vyctem radek
+    double *A = (double *)dt;
+    for(int i=0; i<size; i++){
 
         if(sta.state == t_rt_status::ActiveState){
 
+            t_rt_slice<double> wrks = get(); //pracovni radek v multibufferu vyctem
             qint64 avaiable_l = output_audio->bytesFree();
 
             short local_samples[avaiable_l];  //vycteni dostupneho
-            for(int i=0; i < avaiable_l; i++){  //konverze do shortu a zapis
+            for(int j=0; j < avaiable_l;){  //konverze do shortu a zapis
 
-                local_samples[i] = t_amp.A[i] * scale;
+                local_samples[j++] = A[i++] * scale;
                 t_rt_slice<double>::t_rt_ai s = {sta.fs_out/2, local_samples[i]};
                 wrks.append(s); //vkladame cas kazdeho vzorku
                 if(wrks.A.size() == M){
 
-                    t_slcircbuf::write(wrks); //zapisem novy jeden radek
-                    t_slcircbuf::read(wrks);
+                    write(wrks); //zapisem novy jeden radek
+                    read(wrks);
                     wrks = t_rt_slice<double>(sta.nn_tot / *sta.fs_in); //predpoklad konstantnich t inkrementu; cas 1. ho vzorku
                 }
 
@@ -156,10 +151,10 @@ void t_rt_player::change(){
     }
 
     sta.fs_out = par["Rates"].get().toDouble();  //actual frequency
-    int N = par["Multibuffer"].get().toDouble();
-    int M = par["Time"].get().toDouble() / 1000.0 * sta.fs_out;
+    N = par["Multibuffer"].get().toDouble();
+    M = par["Time"].get().toDouble() / 1000.0 * sta.fs_out;
 
-    t_slcircbuf::resize(M); //novy vnitrni multibuffer
+    resize(M); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
     t_rt_slice<double> dfs(0);

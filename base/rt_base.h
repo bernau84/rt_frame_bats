@@ -50,7 +50,7 @@ protected:
     /*! \brief set new reader ( = forward connection ) */
     virtual int subscriber(i_rt_dataflow *nod){;}
     /*! \brief data to analyse/process */
-    virtual void update(const void *dt, int size) = 0;
+    virtual void update() = 0;
     /*! \brief someone changed setup or imput parameters */
     virtual void change() = 0;
 
@@ -62,7 +62,7 @@ protected:
     /*! \brief merge of recent and new setup and fire the notification  */
     virtual void change_notif(QMap<QString, QVariant> &npar){
 
-        foreach(QPair<QString, QVariant> nval, npar){
+        foreach(QMap<QString, QVariant>::iterator nval, npar){
 
             t_setup_entry val;
             if(par.ask(nval.first, &val)){  //get the config item first

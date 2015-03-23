@@ -10,7 +10,7 @@
  * real allocated size is 2*size
  */
 
-template <typename T, int N> class t_doublebuffer : private t_multibuffer<N, T> {
+template <typename T, int N> class t_doublebuffer : private t_multibuffer<T, N> {
 
     public:
         int write(T smp){  //add sample

@@ -1,6 +1,7 @@
 #ifndef RT_SHIFT_H
 #define RT_SHIFT_H
 
+#include "rt_analysis.h"
 #include "freq_analysis.h"
 #include "freq_filtering.h"
 

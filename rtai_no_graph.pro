@@ -14,7 +14,6 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp\
         analysis/freq_analysis.cpp\
-        analysis/rt_analysis.cpp\
     outputs/rt_output.cpp \
     inputs/rt_sources.cpp \
     base/rt_basictypes.cpp \

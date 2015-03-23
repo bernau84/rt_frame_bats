@@ -17,11 +17,11 @@ class i_rt_dataflow
 {
 public:
 
-    template <typename T> virtual int write(T &smp) = 0;
-    template <typename T> virtual int read(T &smp, int n = 0) = 0;
+    virtual int write(void *smp) = 0;
+    virtual int read(void *smp, int n = 0) = 0;
 
-    template <typename T> virtual T get(int n = 0) = 0;
-    template <typename T> virtual int set(T &smp) = 0;
+    virtual void get(void *smp, int n = 0) = 0;
+    virtual int set(void *smp) = 0;
 
     virtual int shift(int len, int n = 0) = 0;
 
@@ -143,6 +143,22 @@ private:
     using t_multibuffer<T, RT_MAX_READERS>::rmark;
 
 public:
+    virtual int write(void *smp){
+       return t_multibuffer<T, RT_MAX_READERS>::write(*(T *)smp);
+    }
+
+    virtual int read(void *smp, int n = 0){
+       return t_multibuffer<T, RT_MAX_READERS>::read(*(T *)smp, n);
+    }
+
+    virtual void get(void *smp, int n = 0){
+        *(T *)smp = t_multibuffer<T, RT_MAX_READERS>::get(n);
+    }
+
+    virtual int set(void *smp){
+        return t_multibuffer<T, RT_MAX_READERS>::set(*(T *)smp);
+    }
+
     /*! \brief resize & reset */
     virtual void resize(int _size){
 
@@ -179,15 +195,33 @@ private:
 
 public:
 
-    virtual int write(T &smp){ return data.write(smp); }
-    virtual int read(T &smp, int n = 0){ return data.read(smp); }
+    virtual int write(void *smp){
+       return data.write(*(T *)smp);
+    }
 
-    virtual T get(int n = 0){ return data.get(n); }
-    virtual int set(T &smp){ return data.set(n); }
+    virtual int read(void *smp, int n = 0){
+       return data.read(*(T *)smp, n);
+    }
 
-    int shift(int len, int n = 0){ return data.readSpace(len, n); }
-    int readSpace(int n = 0){ return data.readSpace(n); }
-    int writeSpace(int n = 0){ return data.writeSpace(n); }
+    virtual void get(void *smp, int n = 0){
+        *(T *)smp = data.get(n);
+    }
+
+    virtual int set(void *smp){
+        return data.set(*(T *)smp);
+    }
+
+    int shift(int len, int n = 0){
+        return data.readSpace(len, n);
+    }
+
+    int readSpace(int n = 0){
+        return data.readSpace(n);
+    }
+
+    int writeSpace(int n = 0){
+        return data.writeSpace(n);
+    }
 
     rt_dataflow_circ_simo_tfslices(int _size):
         i_rt_dataflow(),
@@ -219,16 +253,37 @@ private:
 
 public:
 
-    virtual int write(T &smp){ return data.write(smp); }
-    virtual int read(T &smp, int n = 0){ return data.read(smp); } /*!< classic copy on read (slow) */
-    virtual const T* read(int n = 0){ return data.read(n); } /*!< direct read (fast), useful for read linear space up to 'size' length */
+    virtual int write(void *smp){
+       return data.write(*(T *)smp);
+    }
 
-    virtual T get(int n = 0){ return data.get(n); }
-    virtual int set(T &smp){ return data.set(n); }
+    virtual int read(void *smp, int n = 0){
+       return data.read(*(T *)smp, n);
+    }
 
-    int shift(int len, int n = 0){ return data.readSpace(len, n); }
-    int readSpace(int n = 0){ return data.readSpace(n); }
-    int writeSpace(int n = 0){ return data.writeSpace(n); }
+    virtual void get(void *smp, int n = 0){
+        *(T *)smp = data.get(n);
+    }
+
+    virtual int set(void *smp){
+        return data.set(*(T *)smp);
+    }
+
+    int shift(int len, int n = 0){
+        return data.readSpace(len, n);
+    }
+
+    int readSpace(int n = 0){
+        return data.readSpace(n);
+    }
+
+    int writeSpace(int n = 0){
+        return data.writeSpace(n);
+    }
+
+    virtual const void* read(int n = 0){ /*!< direct read (fast), useful for read linear space up to 'size' length */
+        return data.read(n);
+    }
 
     rt_dataflow_circ_simo_double(int _size):
         lock(),

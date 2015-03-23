@@ -302,7 +302,7 @@ void gen_window( double *rslt, int N, unsigned int type ){
     int *ExI; //tabelace idexu prohazeni vzorku
 */
 
-/*
+
 //------------------------------------------------------------------------------
 int init_fftcontext(FFT_CONTEXT *con, int _N_FFT, int _WIN, int WinComp, int OvrComp){
 
@@ -370,6 +370,7 @@ void destroy_fftcontext(FFT_CONTEXT *con){
         con->N = 0;
 }
 
+/*
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 #define AGAUSS_REF_M    1024     //na kolik poctu bodu jsou napocirtany tabulky? (limituje presnost mereni B)

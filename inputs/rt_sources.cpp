@@ -3,37 +3,32 @@
 
 #include <QtDebug>
 
-t_rt_source::t_rt_source(QObject *parent, const QDir &resource):
-    i_rt_fp_base(parent, resource)
-{
-}
-
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 t_rt_snd_card::t_rt_snd_card(const QAudioDeviceInfo &in, QObject *parent):
-    t_rt_source(parent, QDir(":/config/js_config_sndsource.txt")), input_dev(in)
+    rt_node(parent),
+    t_rt_source<double>(parent, QDir(":/config/js_config_sndsource.txt")),
+    input_dev(in)
 {
     QJsonArray jfrl;  //conversion
     QList<int> qfrl = in.supportedSampleRates();
     foreach(int f, qfrl) jfrl.append(f);
     t_setup_entry fr(jfrl, "Hz");  //recent list
-    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
+    sta.fs_out = par["Rates"].get().toDouble();  //actual frequency
 
-    set.replace("Rates", fr);  //update list
-    sta.fs_out = set["Rates"].set(sta.fs_out).toDouble(); //select original frequnecy of default if doesnt exist
+    par.replace("Rates", fr);  //update list
+    sta.fs_out = par["Rates"].set(sta.fs_out).toDouble(); //select original frequnecy of default if doesnt exist
 
     *sta.fs_in = sta.fs_out;  //on source is io fr equal
 
     input_io = 0;
     input_audio = 0;
-
-    change();
 }
 
 
 void t_rt_snd_card::start(){
 
-    i_rt_base::start();
+    rt_node::start();
 
     if(input_audio)
         switch(input_audio->state()){
@@ -54,9 +49,9 @@ void t_rt_snd_card::start(){
         }
 }
 
-void t_rt_snd_card::pause(){
+void t_rt_snd_card::stop(){
 
-    i_rt_base::pause();
+    rt_node::stop();
 
     if(input_audio)
         switch(input_audio->state()){
@@ -73,7 +68,7 @@ void t_rt_snd_card::pause(){
         }
 }
 
-void t_rt_snd_card::process(){
+void t_rt_snd_card::process(const void *dt, int size){
 
     if(!input_io || !input_audio)
         return;
@@ -84,9 +79,8 @@ void t_rt_snd_card::process(){
     if(!readable_l) return;
 
     t_rt_slice<double> w; //pracovni radek v multibufferu
-    t_slcircbuf::get(w);  //vyctem
+    get(w);  //vyctem
 
-    int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
     double frres = 2 / *sta.fs_in; //fr rozliseni == nyquistovu frekvenci
     double scale = 1.0 / (1 << (format.sampleSize()-1));  //mame to v signed
 
@@ -96,14 +90,13 @@ void t_rt_snd_card::process(){
             w = t_rt_slice<double>(sta.nn_run / *sta.fs_in, M);
 
         if(0 == w.append(t_rt_slice::t_rt_ai(frres, scale*local_samples[i])))  //slice is full
-            t_slcircbuf::write(w); //zapisem novy jeden radek
+            write(w); //zapisem novy jeden radek
 
         sta.nn_tot += 1;  //celkovy pocet zpracovanych vzorku od zmeny
         sta.nn_run += 1;   //total - jen inkrementujem, kvuli statistice
     }
 
-    t_slcircbuf::set(w);   //zapisem zpet i kdyz neni cely
-    emit on_update(); //dame vedet dal
+    set(w);   //zapisem zpet i kdyz neni cely
 }
 
 void t_rt_snd_card::change_audio_state(QAudio::State act){
@@ -153,19 +146,19 @@ void t_rt_snd_card::change(){
     }
 
     sta.nn_run = 0;
-    sta.fs_out = set["Rates"].get().toDouble();  //actual frequency
-    int N = set["Multibuffer"].get().toDouble();
-    int M = set["Refresh"].get().toDouble() / 1000.0 * sta.fs_out;
+    sta.fs_out = par["Rates"].get().toDouble();  //actual frequency
+    N = par["Multibuffer"].get().toDouble();
+    M = par["Refresh"].get().toDouble();
 
-    t_slcircbuf::resize(N); //novy vnitrni multibuffer
+    resize(N); //novy vnitrni multibuffer
 
     //inicializace prvku na defaultni hodnoty
-    t_rt_slice dfs(0);
-    t_slcircbuf::set(dfs); //vymazem akt. slice aby se mohl s novymi daty inicializovat
+    t_rt_slice<double> dfs(0);
+    set(dfs); //vymazem akt. slice aby se mohl s novymi daty inicializovat
 
-    input_audio->setNotifyInterval(set["Refresh"].get().toDouble());  //navic mame to od byteready
+    input_audio->setNotifyInterval(M);  //navic mame to od byteready
     connect(input_audio, SIGNAL(notify()), SLOT(process()));
     connect(input_audio, SIGNAL(stateChanged(QAudio::State)), SLOT(change_audio_state(QAudio::State)));   //s chybou prechazi AudioInput do stavi Stopped
 
-    emit on_change();
+    M *= (sta.fs_out  / 1000.0); //conversion to sample number
 }
