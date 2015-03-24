@@ -18,11 +18,12 @@ typedef rt_dataflow_circ_simo_double<double> t_fpdbuf;
 /*! \brief - interface for execution content of rt node
  * adds setup support
 */
-class i_rt_base
+class i_rt_base : public virtual i_rt_dataflow
 {
 
 protected:
-    t_collection par;
+    t_collection par;  //setup io & storage
+
 
     //constructor helpers
     QJsonObject __set_from_file(const QString path){
@@ -48,10 +49,16 @@ protected:
 
 public:
 
-    /*! \brief data to analyse/process */
-    virtual void update(const void *dt, int size) = 0;
-    /*! \brief someone changed setup or input signal property (sampling frequency for example) */
-    virtual void change() = 0;
+    /*! list of pure virtual methods for implementation in processing object
+     * plus batch of virtual methods that has to be implemented in data object */
+    //to follower
+    virtual void sig_update() = 0;  /*! \brief update in internal buffer */
+    virtual void sig_change() = 0;  /*! \brief internal tuning has changed */
+    //from precessor
+    virtual void update() = 0;  /*! \brief data to analyse/process */
+    virtual void change() = 0;  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
+
+
     /*! \bries merge of recent and new setup */
     virtual void setup(QMap<QString, QVariant> &npar){
 
@@ -78,7 +85,7 @@ public:
 
 /*! \brief - interface for other sliced multibuffer items in rt network */
 template <typename T> class i_rt_sl_csimo_te : public i_rt_base,
-        public rt_dataflow_circ_simo_tfslices<T>
+        public virtual rt_dataflow_circ_simo_tfslices<T>
 {
 private:
     int rd_n;   //pocet registrovanych prvku pro cteni
