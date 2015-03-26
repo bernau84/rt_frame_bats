@@ -3,6 +3,16 @@
 
 #include <QObject>
 #include "rt_base.h"
+\
+
+class rt_qt_node : public QObject {
+
+};
+
+class rt_std_node : public std::list<int>{
+
+};
+
 
 /*! \brief - commond state variables for any rt item */
 class t_rt_status {
@@ -26,7 +36,6 @@ public:
     } warnings;
 };
 
-
 /*! \brief - implement qt style interconnection and status logic
  * as well as support for json configuration */
 class rt_emptynode : public QObject
@@ -36,6 +45,8 @@ protected:
     rt_emptynode *pre;  //predchozi prvek (zdroj dat)
 
 public:
+    t_rt_status sta;
+
     void attach(rt_emptynode *to){  //trivial - make slot & signal connection
 
         if((pre = to) != NULL){ //registration

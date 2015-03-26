@@ -39,26 +39,26 @@ template <typename T, int N> class t_multibuffer {
         T       *buf;
 
     public:
-        int write(T &smp);  /*!< simple append (update write pointer), return 1 with success */
-        int read(T &smp, int n = 0);  /*!< simple read (update read pointer), return 1 with success */
+        virtual int write(const T *smp);  /*!< simple append (update write pointer), return 1 with success */
+        virtual int set(const T *smp);  /*!< re/write item on write pointer without it shift, return 1 if item avaiable */
 
-        T get(int n = 0);  /*!< reads item on read pointer without it shift */
-        int set(T &smp);  /*!< re/write item on write pointer without it shift, return 1 if item avaiable */
+        virtual const T *read(int n = 0);  /*!< simple read (update read pointer), return non-null with success */
+        virtual const T *get(int n = 0);  /*!< reads item on read pointer without it shift */
 
-        int shift(int len, int n = 0);     /*!< shift read pointer / dummy read = reflect overflow flag */
+        virtual int shift(int len, int n = 0);     /*!< shift read pointer / dummy read = reflect overflow flag */
 
-        int readSpace(int n = 0);      /*!< how much items can be reads/avaiable items */
-        int writeSpace(int n = 0);     /*!< how much items can be write to overwite read buffer n */
+        virtual int readSpace(int n = 0);      /*!< how much items can be reads/avaiable items */
+        virtual int writeSpace(int n = 0);     /*!< how much items can be write to overwite read buffer n */
                                        /*! warning - it is not the free space because it can owerwrite another
                                         * read pointer and we can implement minimum fro all writeSpace because
                                         * we dont know which of N read pointers are used */
 
-        bool isEmpty(int n = 0){
+        virtual bool isEmpty(int n = 0){
 
             return (((overflow[n % N] < 0) && (wmark == rmark[n % N])));
         }
 
-        bool isOver(int n = 0){
+        virtual bool isOver(int n = 0){
 
             return (overflow[n % N] > 0) ? 1 : 0;
         }
@@ -84,23 +84,20 @@ template <typename T, int N> class t_multibuffer {
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-template <typename T, int N> T t_multibuffer<T, N>::get(int n){
+template <typename T, int N>  const T *t_multibuffer<T, N>::get(int n){
 
     int nn = n % N;
 
 #ifndef NO_AVAIL_CHECK
     if(readSpace(nn) <= 0)
-        return T();
+        return NULL;
 #endif //NO_AVAIL_CHECK
 
-    lock.lockRead();
-    T ret = buf[rmark[nn]];
-    lock.unlock();
-    return ret;      //ok
+    return buf[rmark[nn]];      //ok
 }
 
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::set(T &smp){
+template <typename T, int N> int t_multibuffer<T, N>::set(const T *smp){
 
 #ifndef NO_AVAIL_CHECK
     if((smp == NULL) /* || (writeSpace(n) < 0)*/)
@@ -128,12 +125,12 @@ template <typename T, int N> int t_multibuffer<T, N>::shift(int len, int n){
 }
 
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::write(T &smp){
+template <typename T, int N> int t_multibuffer<T, N>::write(const T *smp){
 
     lock.lockWrite();
 
-    buf[wmark++] = smp;
-    if(wmark >= size) wmark = 0;
+    if(smp) buf[wmark] = smp;
+    if(++wmark >= size) wmark = 0;
 
     for(int nn=0; nn < N; nn++)  //testujem pro vsechny cteci pointery!
         if((overflow[nn] > 0) || (wmark == rmark[nn]))  //musime testovat znovu po updatu
@@ -145,23 +142,22 @@ template <typename T, int N> int t_multibuffer<T, N>::write(T &smp){
 }
 
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::read(T &smp, int n){
+template <typename T, int N> const T *t_multibuffer<T, N>::read(int n){
 
     int nn = n % N;
-    int ret = 0;
+    const T *smp = NULL;
 
     lock.lockRead();
     if((wmark != rmark[nn]) || (overflow[nn] >= 0)){
 
-        smp = buf[rmark[nn]++];
-        if(rmark[nn] >= size) rmark[nn] = 0;
+        smp = &buf[rmark[nn]];
+        if(++rmark[nn] >= size) rmark[nn] = 0;
 
         overflow[nn] = -1; //OK
-        ret = 1;
     }
     lock.unlock();
 
-    return ret;
+    return smp;
 }
 
 //------------------------------------------------------------------------------

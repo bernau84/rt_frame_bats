@@ -13,21 +13,27 @@
 /*! \class i_rt_dataflow
  * \brief interface for all data storages for use in rt_base
  */
-class i_rt_dataflow
+
+class i_rt_dataflow_input
+{
+protected:
+    //for internal working object usage
+    virtual int write(const void *smp) = 0;
+    virtual int set(const void *smp) = 0;
+    virtual int writeSpace() = 0;
+};
+
+class i_rt_dataflow_output
 {
 public:
-
-    virtual int write(void *smp) = 0;
-    virtual int read(void *smp, int n = 0) = 0;
-
-    virtual void get(void *smp, int n = 0) = 0;
-    virtual int set(void *smp) = 0;
-
-    virtual int shift(int len, int n = 0) = 0;
-
+    //extern obejct can read too (but cannot change)
+    virtual const void *read(int n = 0) = 0;
+    virtual const void *get(int n = 0) = 0;
     virtual int readSpace(int n = 0) = 0;
-    virtual int writeSpace(int n = 0) = 0;
+};
 
+class i_rt_dataflow : public virtual i_rt_dataflow_input, i_rt_dataflow_output
+{
     rt_dataflow(){;}
     virtual ~rt_dataflow(){;}
 };
@@ -43,8 +49,8 @@ private:
 public:
 
     T          t;  //time mark of this slice
-    QVector<T> A;  //amplitude
-    QVector<T> I;  //index / frequency
+    std::vector<T> A;  //amplitude
+    std::vector<T> I;  //index / frequency
 
     //some useful operators on <A, I> pair
     typedef struct {
@@ -94,8 +100,8 @@ public:
 
     t_rt_slice &operator= (const t_rt_slice &d){
 
-        A = QVector<T>(d.A);
-        I = QVector<T>(d.I);
+        A = std::vector<T>(d.A);
+        I = std::vector<T>(d.I);
         t = d.t;
         irecent = -1;
     }
@@ -129,35 +135,31 @@ public:
 /*! \brief - encapsulation for multibuffer fixed number of readers
  * typedef is unusable in this case
  */
-template <class T> class t_slcircbuf : public t_multibuffer<T, RT_MAX_READERS> {
-
+template <class T> class rt_idf_circ_simo<T> : public virtual i_rt_dataflow
+{
 private:
     rt_qt_lock lock;
+    t_multibuffer<T, RT_MAX_READERS> data;
+
+protected:
+    //for internal working object usage
+    virtual int write(const void *smp){ return data::write((T *)smp); }
+    virtual int set(const void *smp){ return data::set((T *)smp); }
+    virtual int writeSpace(){ return data::writeSpace(0); }
 
     /* typedef arrayListType<elemType> Parent; or this for non C++11
-     * otherway use 'using' keyword */
-    using t_multibuffer<T, RT_MAX_READERS>::buf;
-    using t_multibuffer<T, RT_MAX_READERS>::size;
-    using t_multibuffer<T, RT_MAX_READERS>::wmark;
-    using t_multibuffer<T, RT_MAX_READERS>::overflow;
-    using t_multibuffer<T, RT_MAX_READERS>::rmark;
+      * otherway use 'using' keyword */
+     using t_multibuffer<T, RT_MAX_READERS>::buf;
+     using t_multibuffer<T, RT_MAX_READERS>::size;
+     using t_multibuffer<T, RT_MAX_READERS>::wmark;
+     using t_multibuffer<T, RT_MAX_READERS>::overflow;
+     using t_multibuffer<T, RT_MAX_READERS>::rmark;
 
 public:
-    virtual int write(void *smp){
-       return t_multibuffer<T, RT_MAX_READERS>::write(*(T *)smp);
-    }
-
-    virtual int read(void *smp, int n = 0){
-       return t_multibuffer<T, RT_MAX_READERS>::read(*(T *)smp, n);
-    }
-
-    virtual void get(void *smp, int n = 0){
-        *(T *)smp = t_multibuffer<T, RT_MAX_READERS>::get(n);
-    }
-
-    virtual int set(void *smp){
-        return t_multibuffer<T, RT_MAX_READERS>::set(*(T *)smp);
-    }
+    //extern object can read too (but cannot change)
+    virtual const void *read(int n = 0){return data::read(n); }
+    virtual const void *get(int n = 0){return data::get(n); }
+    virtual int readSpace(int n = 0){return data::readSpace(n); }
 
     /*! \brief resize & reset */
     virtual void resize(int _size){
@@ -176,60 +178,14 @@ public:
         }
     }
 
-    t_slcircbuf(int _size):
-        lock(),
-        t_multibuffer<T, RT_MAX_READERS>(_size, lock)
-    {
-    }
-
-    virtual ~t_slcircbuf(){;}
-};
-
-/*! \brief tempate class of data storage suitable for rt_base
- * circular, single input multi output (multireader), time-frequency slices as elements
- */
-template <class T> class rt_dataflow_circ_simo_tfslices<T> : public virtual i_rt_dataflow
-{
-private:
-    t_slcircbuf<T> data;
-
-public:
-
-    virtual int write(void *smp){
-       return data.write(*(T *)smp);
-    }
-
-    virtual int read(void *smp, int n = 0){
-       return data.read(*(T *)smp, n);
-    }
-
-    virtual void get(void *smp, int n = 0){
-        *(T *)smp = data.get(n);
-    }
-
-    virtual int set(void *smp){
-        return data.set(*(T *)smp);
-    }
-
-    int shift(int len, int n = 0){
-        return data.readSpace(len, n);
-    }
-
-    int readSpace(int n = 0){
-        return data.readSpace(n);
-    }
-
-    int writeSpace(int n = 0){
-        return data.writeSpace(n);
-    }
-
-    rt_dataflow_circ_simo_tfslices(int _size):
+    rt_idf_circ_simo(int _size):
         i_rt_dataflow(),
-        data(_size)
+        lock(),
+        data(_size, lock)
     {
     }
 
-    virtual ~rt_dataflow_circ_simo_tfslices(){;}
+    virtual ~rt_idf_circ_simo(){;}
 };
 
 
@@ -237,62 +193,57 @@ public:
  * circular, single input multi output (multireader), double buffer wit no need for warapped copy on read acceess
  */
 
-template <class T> class rt_dataflow_circ_simo_double<T> : public virtual i_rt_dataflow
+template <class T> class rt_idf_circ2buf_simo<T> : public virtual i_rt_dataflow
 {
 private:
     rt_qt_lock lock;
     t_doublebuffer<T, RT_MAX_READERS> data;
 
     /* typedef arrayListType<elemType> Parent; or this for non C++11
-     * otherway use 'using' keyword */
-    using t_multibuffer<T, RT_MAX_READERS>::buf;
-    using t_multibuffer<T, RT_MAX_READERS>::size;
-    using t_multibuffer<T, RT_MAX_READERS>::wmark;
-    using t_multibuffer<T, RT_MAX_READERS>::overflow;
-    using t_multibuffer<T, RT_MAX_READERS>::rmark;
+      * otherway use 'using' keyword */
+     using t_multibuffer<T, RT_MAX_READERS>::buf;
+     using t_multibuffer<T, RT_MAX_READERS>::size;
+     using t_multibuffer<T, RT_MAX_READERS>::wmark;
+     using t_multibuffer<T, RT_MAX_READERS>::overflow;
+     using t_multibuffer<T, RT_MAX_READERS>::rmark;
+
+protected:
+    //for internal working object usage
+    virtual int write(const void *smp){ return data::write((T *)smp); }
+    virtual int set(const void *smp){ return data::set((T *)smp); }
+    virtual int writeSpace(){ return data::writeSpace(0); }
 
 public:
+    //extern obejct can read too (but cannot change)
+    virtual const void *read(int n = 0){return data::read(n); }
+    virtual const void *get(int n = 0){return data::get(n); }
+    virtual int readSpace(int n = 0){return data::readSpace(n); }
 
-    virtual int write(void *smp){
-       return data.write(*(T *)smp);
+    /*! \brief resize & reset */
+    virtual void resize(int _size){
+
+        //keeping data is not possible cause possition of rd/wr
+        //pointers is unpredictible
+        if(buf) delete[] buf;
+
+        buf = new T[size = 2*_size];
+
+        wmark = 0;
+        for(int i=0; i<RT_MAX_READERS; i++){
+
+            overflow[i] = -1;
+            rmark[i] = 0;
+        }
     }
 
-    virtual int read(void *smp, int n = 0){
-       return data.read(*(T *)smp, n);
-    }
-
-    virtual void get(void *smp, int n = 0){
-        *(T *)smp = data.get(n);
-    }
-
-    virtual int set(void *smp){
-        return data.set(*(T *)smp);
-    }
-
-    int shift(int len, int n = 0){
-        return data.readSpace(len, n);
-    }
-
-    int readSpace(int n = 0){
-        return data.readSpace(n);
-    }
-
-    int writeSpace(int n = 0){
-        return data.writeSpace(n);
-    }
-
-    virtual const void* read(int n = 0){ /*!< direct read (fast), useful for read linear space up to 'size' length */
-        return data.read(n);
-    }
-
-    rt_dataflow_circ_simo_double(int _size):
-        lock(),
+    rt_idf_circ2buf_simo(int _size):
         i_rt_dataflow(),
+        lock(),
         data(_size, lock)
     {
     }
 
-    virtual ~rt_dataflow_circ_simo_double(){;}
+    virtual ~rt_idf_circ2buf_simo(){;}
 };
 
 

@@ -9,21 +9,15 @@
 #include "rt_setup.h"
 #include "rt_dataflow.h"
 
-
-/*! symnames for floating point dataflow buffers */
-typedef rt_dataflow_circ_simo_tfslices<double> t_sl_fpcbuf;
-typedef rt_dataflow_circ_simo_double<double> t_fpdbuf;
-
-
-/*! \brief - interface for execution content of rt node
- * adds setup support
-*/
-class i_rt_base : public virtual i_rt_dataflow
+/*! \brief - interface for object with io setup encapsulation
+ * and working interface
+ * child of this object are usable stand alone - need no other interface
+ */
+class i_rt_worker : public virtual i_rt_dataflow_output
 {
 
 protected:
     t_collection par;  //setup io & storage
-
 
     //constructor helpers
     QJsonObject __set_from_file(const QString path){
@@ -48,19 +42,10 @@ protected:
     }
 
 public:
-
-    /*! list of pure virtual methods for implementation in processing object
-     * plus batch of virtual methods that has to be implemented in data object */
-    //to follower
-    virtual void sig_update() = 0;  /*! \brief update in internal buffer */
-    virtual void sig_change() = 0;  /*! \brief internal tuning has changed */
-    //from precessor
-    virtual void update() = 0;  /*! \brief data to analyse/process */
+    virtual void update(const void *sample) = 0;  /*! \brief data to analyse/process */
     virtual void change() = 0;  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
-
-    /*! \bries merge of recent and new setup */
-    virtual void setup(QMap<QString, QVariant> &npar){
+    virtual void update(QMap<QString, QVariant> &npar){      /*! \brief merge of recent and new setup */
 
         foreach(QMap<QString, QVariant>::iterator nval, npar){
 
@@ -74,56 +59,90 @@ public:
 
         change();
     }
-    virtual ~i_rt_base();
-    i_rt_base(const QDir &resource = QDir()):
+
+    virtual ~i_rt_worker();
+    i_rt_worker(const QDir &resource = QDir()):
         par(__set_from_file(resource.absolutePath())){
 
         change();  //to apply inited parameter
     }
 };
 
-
-/*! \brief - interface for other sliced multibuffer items in rt network */
-template <typename T> class i_rt_sl_csimo_te : public i_rt_base,
-        public virtual rt_dataflow_circ_simo_tfslices<T>
+/*! \brief - interface for object with io setup encapsulation
+ * and workoing interface
+*/
+class i_rt_base : virtual public i_rt_worker
 {
 private:
-    int rd_n;   //pocet registrovanych prvku pro cteni
-    int rd_i;   //cteci index v multibufferu predchoziho prvku
+    std::vector<const i_rt_base *> subscribers;
+    i_rt_dataflow_output *pending_src;
+    int reader_i;
 
+    t_lock lock;
 public:
-    /*! \brief - set new reader ( = forward connection ) */
-    virtual int subscriber(i_rt_dataflow *nod){  //vraci index pod kterym muze pristupovat do multibufferu
+    int subscribe(const i_rt_base *reader){
 
-        if(rd_n >= RT_MAX_READERS) return -1; //zadnej dalsi prvek uz pripojit nemuzeme
+        if(subscribers.size() >= RT_MAX_READERS)
+            return -1;
 
-        //read out buffered data - prevent overload new item
-        t_rt_slice<T> dm;
-        for(int n=0; n<nod->readSpace(rd_n); n++)
-            nod->read<t_rt_slice<T> >(&dm, rd_n);
-
-        return rd_n++;  //dalsi pijavice
+        subscribers.push_back(reader);
+        return subscribers.size()-1;
     }
 
-    /*! \brief callbacks annonced new data from source
-     * we can implemented it for all sliced multibuffer centraly */
-    virtual void update_notif(i_rt_dataflow &src){
+    int connect_to(const i_rt_base *source){
 
-        /* expect sourced object is the same type as we are */
-        t_rt_slice<T> w;
-        while(read<t_rt_slice<T> >(w, rd_i))
-            update(w.A.data(), w.A.size());
+        reader_i = source->subscribe(this);
     }
 
-public:
-    i_rt_sl_csimo_te(QObject *parent){
+    //zmena interfacu za behu neni pripustna (nepodporujem dynamickou zmenu usporadani
+    // takze todle je bezpecne)
+    virtual void sig_update(i_rt_dataflow_output *src){ //store or process instantly
 
-        rd_n = 1;   //kolik prvku uz mame registrovano - index 0. vyhrazen pro tento prvek (vyzaduje to management - musime cist co jsem zapsali)
-        rd_i = -1;   //index pod kterym muze vycitat data z predchoziho prvku
+        pending_src = src;
+        if(lock.isLocked())
+            return;
+
+        if(reader_i >= 0)
+            while(NULL != (sample = pending_src->read(reader_i)))
+                update(sample);
     }
 
-    virtual ~i_rt_sl_csimo_te(){;}
-};
+    virtual void sig_update(const void *sample){ //process instantly (sample has not quarantine validity)
+
+        update(sample);
+    }
+
+    virtual void update(const void *sample){
+
+        lock.lock();
+        i_rt_worker::update(sample); //process sample
+        lock.unlock();
+
+        while(readSpace()){
+
+            const void *sample = read();
+            for(int i=0; i<subscribers.size(); i++){
+
+                subscribers[i]->sig_update(sample);
+                subscribers[i]->sig_update(this);
+            }
+        }
+    }
+
+    i_rt_base(const QDir &resource):
+        i_rt_worker(resource),
+        reader_i(-1)
+    {
+
+    }
+
+    virtual void ~i_rt_base(){
+
+    }
+}
+
+
+
 
 #endif // T_RT_BASE_H
 
