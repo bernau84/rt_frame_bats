@@ -33,7 +33,9 @@ HEADERS  += mainwindow.h\
     base/rt_dataflow.h \
     base/rt_setup.h \
     analysis/rt_cpb.h \
-    base/rt_node.h
+    base/rt_node.h \
+    base/rt_common.h \
+    base/rt_datatypes.h
 
 FORMS    += mainwindow.ui
 

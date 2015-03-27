@@ -3,20 +3,7 @@
 
 #define NO_AVAIL_CHECK
 
-/*! \brief - interface definition for lock - depend on concrete implementation
- * \note - QReadWriteLock can be use for Qt, Mutex in C03 standard */
-
-class t_rt_lock {
-
-public:
-    virtual void lockRead(){;}
-    virtual void lockWrite(){;}
-    virtual void unlock(){;}
-
-    t_rt_lock(){;}
-    virtual ~t_rt_lock(){;}
-};
-
+#include "rt_common.h"
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -29,7 +16,7 @@ public:
 template <typename T, int N> class t_multibuffer {
 
     private:
-        t_rt_lock lock;
+        t_rt_lock &lock;
 
     protected:
         int     size;
@@ -37,6 +24,24 @@ template <typename T, int N> class t_multibuffer {
         int     rmark[N];
         int     overflow[N];
         T       *buf;
+
+        void __init(){
+
+            buf = (T *) new T[size];
+
+            wmark = 0;
+            for(int i=0; i<N; i++){
+
+                overflow[i] = -1;
+                rmark[i] = 0;
+            }
+        }
+
+        void __deinit(){
+
+            delete[] buf;
+        }
+
 
     public:
         virtual int write(const T *smp);  /*!< simple append (update write pointer), return 1 with success */
@@ -63,22 +68,24 @@ template <typename T, int N> class t_multibuffer {
             return (overflow[n % N] > 0) ? 1 : 0;
         }
 
-        t_multibuffer(int _size, t_rt_lock &_lock)  /*!< size is number of item, can work directly on p if int NULL */
+        /*!< size is number of item*/
+        t_multibuffer(int _size)
+            :size(_size){
+
+            __init();
+        }
+
+        /*!< size is number of item, define mutex lock if concuret writing
+         * or concuret reading from one index can occure */
+        t_multibuffer(int _size, t_rt_lock _lock)
             :size(_size), lock(_lock){
 
-            buf = (T *) new T[size];
-
-            wmark = 0;
-            for(int i=0; i<N; i++){
-
-                overflow[i] = -1;
-                rmark[i] = 0;
-            }
+            __init();
         }
 
         virtual ~t_multibuffer(){
 
-            if(buf) delete[] buf;
+            __deinit();
         }
 };
 
@@ -117,7 +124,8 @@ template <typename T, int N> int t_multibuffer<T, N>::shift(int len, int n){
     int nn = n % N;
 
     lock.lockRead();
-    if((rmark[nn] += len) >= size) rmark[nn] -= size;
+    if((rmark[nn] + len) >= size) rmark[nn] -= size;
+        else rmark[nn] += len;
     overflow[nn] = -1;
     lock.unlock();
 
@@ -130,7 +138,10 @@ template <typename T, int N> int t_multibuffer<T, N>::write(const T *smp){
     lock.lockWrite();
 
     if(smp) buf[wmark] = smp;
-    if(++wmark >= size) wmark = 0;
+    //check than modify - prevent mark to point out form buffer
+    //can be problem at multithread, we dont have to use lock (for simo system)
+    if(wmark >= (size-1)) wmark = 0;
+        else wmark++;
 
     for(int nn=0; nn < N; nn++)  //testujem pro vsechny cteci pointery!
         if((overflow[nn] > 0) || (wmark == rmark[nn]))  //musime testovat znovu po updatu
@@ -151,7 +162,8 @@ template <typename T, int N> const T *t_multibuffer<T, N>::read(int n){
     if((wmark != rmark[nn]) || (overflow[nn] >= 0)){
 
         smp = &buf[rmark[nn]];
-        if(++rmark[nn] >= size) rmark[nn] = 0;
+        if(rmark[nn] >= (size-1)) rmark[nn] = 0;
+            else rmark[nn]++;
 
         overflow[nn] = -1; //OK
     }
@@ -163,12 +175,13 @@ template <typename T, int N> const T *t_multibuffer<T, N>::read(int n){
 //------------------------------------------------------------------------------
 template <typename T, int N> int t_multibuffer<T, N>::readSpace(int n){
 
-    lock.lockWrite();
+    //lock.lockWrite();
 
     int nn = n % N;
     int tmp = (int)(wmark - rmark[nn]);
     if( ((tmp == 0)&&(overflow[nn] >= 0)) || (tmp < 0) ) tmp += size;   //volny prostor je prelozeny, nebo doslo k preteceni
-    lock.unlock();
+
+    //lock.unlock();
 
     return(tmp);   //prostor nebyl prelozeny (rd muze != wr i pri overflow)
 }
@@ -177,7 +190,7 @@ template <typename T, int N> int t_multibuffer<T, N>::readSpace(int n){
 //vycitani volneho mista z kruh bufferu ktery vyuziva cely prostor
 template <typename T, int N> int t_multibuffer<T, N>::writeSpace(int n){
 
-    lock.lockWrite();
+    //lock.lockWrite();
 
     int nn = n % N;
     int tmp = (int)(rmark[nn] - wmark);
@@ -187,7 +200,7 @@ template <typename T, int N> int t_multibuffer<T, N>::writeSpace(int n){
     } else
       tmp = 0;
 
-    lock.unlock();
+    //lock.unlock();
     return tmp; //mam tu preteceni - nelze zapsat nic; az dokud si app overflow neshodi
 }
 

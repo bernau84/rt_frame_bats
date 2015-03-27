@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QSignalMapper>
 
+#include "rt_common.h"
 #include "rt_setup.h"
 #include "rt_dataflow.h"
 
@@ -45,21 +46,6 @@ public:
     virtual void update(const void *sample) = 0;  /*! \brief data to analyse/process */
     virtual void change() = 0;  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
-    virtual void update(QMap<QString, QVariant> &npar){      /*! \brief merge of recent and new setup */
-
-        foreach(QMap<QString, QVariant>::iterator nval, npar){
-
-            t_setup_entry val;
-            if(par.ask(nval.first, &val)){  //get the config item first
-
-                val.set(nval.second);  //update actual value (with all restriction applied)
-                par.replace(nval.first, val); //writeback
-            }
-        }
-
-        change();
-    }
-
     virtual ~i_rt_worker();
     i_rt_worker(const QDir &resource = QDir()):
         par(__set_from_file(resource.absolutePath())){
@@ -71,48 +57,32 @@ public:
 /*! \brief - interface for object with io setup encapsulation
  * and workoing interface
 */
+
+enum e_rt_regime {
+
+    RT_BLOCKING = 0,
+    RT_QUEUED
+};
+
 class i_rt_base : virtual public i_rt_worker
 {
 private:
+    e_rt_regime m_mode;
+
+    //props for acces trough interface
     std::vector<const i_rt_base *> subscribers;
-    i_rt_dataflow_output *pending_src;
     int reader_i;
 
-    t_lock lock;
-public:
-    int subscribe(const i_rt_base *reader){
+    //queue mode props
+    std::list<const void *> pending_smp;
+    i_rt_dataflow_output *pending_src;
 
-        if(subscribers.size() >= RT_MAX_READERS)
-            return -1;
+    //lock for exclusive run of update
+    rt_std_lock m_lock;
 
-        subscribers.push_back(reader);
-        return subscribers.size()-1;
-    }
-
-    int connect_to(const i_rt_base *source){
-
-        reader_i = source->subscribe(this);
-    }
-
-    //zmena interfacu za behu neni pripustna (nepodporujem dynamickou zmenu usporadani
-    // takze todle je bezpecne)
-    virtual void sig_update(i_rt_dataflow_output *src){ //store or process instantly
-
-        pending_src = src;
-        if(lock.isLocked())
-            return;
-
-        if(reader_i >= 0)
-            while(NULL != (sample = pending_src->read(reader_i)))
-                update(sample);
-    }
-
-    virtual void sig_update(const void *sample){ //process instantly (sample has not quarantine validity)
-
-        update(sample);
-    }
-
-    virtual void update(const void *sample){
+    /*! \brief sample process & notification to follower
+     */
+    void __update(const void *sample){
 
         lock.lock();
         i_rt_worker::update(sample); //process sample
@@ -123,17 +93,126 @@ public:
             const void *sample = read();
             for(int i=0; i<subscribers.size(); i++){
 
-                subscribers[i]->sig_update(sample);
-                subscribers[i]->sig_update(this);
+                subscribers[i]->sig_update(sample); //report each sample
+                if(!i) subscribers[i]->sig_update(this);  //only once
             }
         }
     }
 
-    i_rt_base(const QDir &resource):
-        i_rt_worker(resource),
-        reader_i(-1)
-    {
 
+    /*! \brief safe calling of change according to setup parameters
+     * reset proccessing also
+     */
+    void __change(){
+
+        //wait for empty queue - samples may become invalid ater updade
+        //for sesizing internal buffer
+        while(pending_samples());
+
+        lock.lock();
+        i_rt_worker::change(); //process sample
+        lock.unlock();
+    }
+
+public:
+    /*! \brief allow follower to register as independant reader
+     * if they wan to work in buffered mode using i_rt_dataflow_output
+     * interface
+     * \return 1..RT_MAX_READERS-1, 0 is reserved for internal use */
+    int subscribe(const i_rt_base *reader){
+
+        if(subscribers.size() >= RT_MAX_READERS)
+            return -1;
+
+        subscribers.push_back(reader);
+        return subscribers.size();
+    }
+
+    /*! \brief calling subscibe of remote source */
+    int connect(const i_rt_base *to){
+
+        reader_i = source->subscribe(this);
+    }
+
+    /*! \brief query of remaining samples to procceed
+     * for ballancing load and for waiting for idle state (== 0)
+     */
+    int pending_samples(){
+
+        if(pending_src && (reader_i >= 0))  //reader is valid only in cached mode
+            return pending_src->readSpace(reader_i);
+
+        return pending_smp.size();
+    }
+
+    /*! \brief received notification of new data to process;
+     * in dependance of mode data are immediately procesed or
+     * information is saved for next time;
+     *
+     * for data caching is responsible source
+     */
+    virtual void sig_update(i_rt_dataflow_output *src){ //store or process instantly
+
+        pending_src = src;
+        if(m_mode == RT_QUEUED)
+            if(lock.locked())
+                return;
+
+        if(reader_i >= 0)
+            while(NULL != (sample = pending_src->read(reader_i)))
+                update(sample);
+    }
+
+    /*! \brief received notification of new data to process;
+     * in dependance of mode sample is immediately procesed or
+     * pointer is cached in internal queue
+     */
+    virtual void sig_update(const void *sample){ //process instantly (sample has not quarantine validity)
+
+        pending_smp.push_back(sample);
+        if(m_mode == RT_QUEUED)
+            if(lock.locked())
+                return;
+
+        while(pending_smp.size())
+            __update(pending_smp.pop_front());
+    }
+
+    /*! \brief safe calling of change according to setup parameters
+     * reset proccessing also
+     */
+    virtual void sig_change(){
+
+        __change();
+    }
+
+
+    /*! \brief setup collection io, read for empty/default v
+     */
+    QVariant setup(const QString &name, QVariant v = QVariant()){
+
+        t_setup_entry val;
+        if(0 == par.ask(name, &val))  //get the config item first
+            return QVariant(); //parametr of name do not exists
+
+        if(v.isValid()){
+
+            val.set(v);  //update actual value (with all restriction applied)
+            par.replace(nval.first, val); //writeback
+
+            __change();
+        }
+
+        return val.get();
+    }
+
+    i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
+        i_rt_worker(resource),
+        reader_i(-1),
+        pending_smp(),
+        pending_src(NULL),
+        m_mode(mode)
+    {
     }
 
     virtual void ~i_rt_base(){
