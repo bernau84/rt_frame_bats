@@ -6,7 +6,7 @@
 #include <QAudioFormat>
 #include <QAudioInput>
 
-template <typename T> class t_rt_source : public virtual i_rt_base,
+template <typename T> class t_rt_source : public virtual t_rt_base,
             public virtual i_rt_sl_csimo_te<T>  //, public QThread
 {
 public:

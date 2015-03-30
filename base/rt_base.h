@@ -10,8 +10,7 @@
 #include "rt_setup.h"
 #include "rt_dataflow.h"
 
-/*! \brief - interface for object with io setup encapsulation
- * and working interface
+/*! \brief - interface for object with io setup encapsulation and working interface
  * child of this object are usable stand alone - need no other interface
  */
 class i_rt_worker : public virtual i_rt_dataflow_output
@@ -54,8 +53,11 @@ public:
     }
 };
 
-/*! \brief - interface for object with io setup encapsulation
- * and workoing interface
+/*! \brief - worker warapper and interface boundary between object
+ * do not depend on qt signal-slot instead use queue and calabck (rt_regime option)
+ *
+ * child obejct can overload sig_update/change and proc_update/change
+ * to modify the signal <-> process mechanism
 */
 
 enum e_rt_regime {
@@ -64,9 +66,9 @@ enum e_rt_regime {
     RT_QUEUED
 };
 
-class i_rt_base : virtual public i_rt_worker
+class t_rt_base : virtual public i_rt_worker
 {
-private:
+protected:
     e_rt_regime m_mode;
 
     //props for acces trough interface
@@ -106,7 +108,7 @@ private:
     void __change(){
 
         //wait for empty queue - samples may become invalid ater updade
-        //for sesizing internal buffer
+        //for resizing internal buffer
         while(pending_samples());
 
         lock.lock();
@@ -129,9 +131,9 @@ public:
     }
 
     /*! \brief calling subscibe of remote source */
-    int connect(const i_rt_base *to){
+    int connection(const i_rt_base *to){
 
-        reader_i = source->subscribe(this);
+        reader_i = to->subscribe(this);
     }
 
     /*! \brief query of remaining samples to procceed
@@ -151,7 +153,7 @@ public:
      *
      * for data caching is responsible source
      */
-    virtual void sig_update(i_rt_dataflow_output *src){ //store or process instantly
+    void sig_update(i_rt_dataflow_output *src){ //store or process instantly
 
         pending_src = src;
         if(m_mode == RT_QUEUED)
@@ -160,14 +162,14 @@ public:
 
         if(reader_i >= 0)
             while(NULL != (sample = pending_src->read(reader_i)))
-                update(sample);
+                __update(sample);
     }
 
     /*! \brief received notification of new data to process;
      * in dependance of mode sample is immediately procesed or
      * pointer is cached in internal queue
      */
-    virtual void sig_update(const void *sample){ //process instantly (sample has not quarantine validity)
+    void sig_update(const void *sample){ //process instantly (sample has not quarantine validity)
 
         pending_smp.push_back(sample);
         if(m_mode == RT_QUEUED)
@@ -183,7 +185,7 @@ public:
      */
     virtual void sig_change(){
 
-        __change();
+        proc_change();
     }
 
 
@@ -206,7 +208,7 @@ public:
         return val.get();
     }
 
-    i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
+    t_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
         i_rt_worker(resource),
         reader_i(-1),
         pending_smp(),
@@ -215,7 +217,7 @@ public:
     {
     }
 
-    virtual void ~i_rt_base(){
+    virtual void ~t_rt_base(){
 
     }
 }

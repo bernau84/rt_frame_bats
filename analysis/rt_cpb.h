@@ -5,11 +5,13 @@
 #include "freq_analysis.h"
 #include "freq_filtering.h"
 
-#define RT_MAX_OCTAVES_NUMBER      20
-#define RT_MAX_BANDS_PER_OCTAVE    24
+
+#define RT_CPB_MAX_OCTAVES      20
+#define RT_CPB_MAX_BANDSINOCTAVE    24
+#define RT_CPB_MAX_BANDS (RT_CPB_MAX_OCTAVES*RT_CPB_MAX_BANDSINOCTAVE)
 
 
-template <typename T> class t_rt_cpb_te : public i_rt_worker, public virtual rt_idf_circ_simo<t_rt_slice<T>>
+template <typename T> class t_rt_cpb_te : public i_rt_worker
 {
 private:
     int gd;    /*! groupdelay - number od deci fir taps */
@@ -18,15 +20,19 @@ private:
     double refr; /*! refresh rate */
 
     t_rt_slice<T> cpb;                     /*! active spectrum */
-    //rt_idf_circ_simo<t_rt_slice<T>> *buf;  /*! spectrum buffer */
+    rt_idf_circ_simo<t_rt_slice<T>> *buf;  /*! spectrum buffer */
 
     t_DiadicFilterBank<T> *bank;   /*! decimation fir filters branch */
-    t_DelayLine<T> *dline[RT_MAX_OCTAVES_NUMBER]; /*! group delay compensation set of fir filters */
+    t_DelayLine<T> *dline[RT_CPB_MAX_OCTAVES]; /*! group delay compensation set of fir filters */
 
-    t_pFilter<T> *aline[RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE]; /*! analytic iir filters branch - band pass */
-    t_pFilter<T> *aver[RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE];  /*! output averaging iir */
+    t_pFilter<T> *aline[RT_CPB_MAX_BANDS]; /*! analytic iir filters branch - band pass */
+    t_pFilter<T> *aver[RT_CPB_MAX_BANDS];  /*! output averaging iir */
 
 public:
+    virtual const void *read(int n){ return (buf) ? buf->read(n) : NULL; }
+    virtual const void *get(int n){ return (buf) ? buf->get(n) : NULL;  }
+    virtual const int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
+
     virtual void update(const void *sample);  /*! \brief data to analyse/process */
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
@@ -59,17 +65,18 @@ template<typename T> t_rt_cpb_te<T>::t_rt_cpb_te(const QDir &resource):
 /*! \brief destructor free digital filter allocation */
 template<typename T> void t_rt_cpb_te<T>::~t_rt_cpb_te(){
 
-    if(bank)
-        delete bank;
+    if(bank) delete bank;
 
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER; dline[i++] = 0)
+    for(int i=0; i<RT_CPB_MAX_OCTAVES; dline[i++] = 0)
         if(dline[i]) delete dline[i];
 
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE; aline[i++] = 0)
-        if(aline[i]) delete aline[i];
+    for(int i=0; i<RT_CPB_MAX_BANDS; i++){
 
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE; aver[i++] = 0)
+        if(aline[i]) delete aline[i];
         if(aver[i]) delete aver[i];
+    }
+
+    if(buf) delete buf;
 }
 
 /*! \brief implement cpb algortihm, assumes real time feeding
@@ -83,7 +90,7 @@ template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
 
     for(int i=0; i<smp->A.size; i++){
 
-        T lp_st[RT_MAX_OCTAVES_NUMBER]; //
+        T lp_st[RT_CPB_MAX_OCTAVES]; //
         int n = bank->Process(smp->A[i], lp_st);  //deci bank, update [0] a [n-th] octave band
 
         if(n >= octn) //omits octaves exceed given freq. range (computation powere is the same do decimation)
@@ -126,18 +133,22 @@ template <typename T> void t_rt_cpb_te::change(){
     octn = par["Octaves"].get().toDouble();  //aktualni pocet oktav
     octm = par["Bands"].get().toDouble();  //pocet pasem na oktavu
     refr = par["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
-    resize(par["Slices"].get());  //resize internal buffer
+
+    //v1 - resize internal buffer
+    buf->resize(par["Slices"].get());
+    //v2 - rellocate
+//    delete(buf);
+//    buf = (rt_idf_circ_simo<t_rt_slice<T>> *) new rt_idf_circ_simo<t_rt_slice<T>>(par["Slices"].get());
 
     cpb = t_rt_slice<T>(cpb.t, octm*octn); //keeps old time
 
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER; dline[i++] = 0)
+    for(int i=0; i<RT_CPB_MAX_OCTAVES; dline[i++] = 0)
         if(dline[i]) delete dline[i];
 
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE; aline[i++] = 0)
+    for(int i=0; i<RT_CPB_MAX_BANDS; i++){
         if(aline[i]) delete aline[i];
-
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE; aver[i++] = 0)
         if(aver[i]) delete aver[i];
+    }
 
     //napocitame jen takove zpozdeni ktere je nezbytne
     T delay[octn];
@@ -167,8 +178,6 @@ template <typename T> void t_rt_cpb_te::change(){
             aline[i*octm + j] = (t_pFilter<T> *) new t_BiQuadFilter<double>(num, den, rn/3);
         }
     }
-
-    sig_change(); //poslem dal
 }
 
 #endif // RT_CPB_H

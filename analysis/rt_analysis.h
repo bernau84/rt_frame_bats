@@ -6,21 +6,18 @@
 #include "analysis\rt_cpb.h"
 //#include "analysis\rt_shift.h"
 
-/*! \brief final assembly of rt_node and template of cpb */
-
+/*! \brief final assembly of rt_node and template of cpb - floating point version*/
 class rt_cpb_fp : virtual public rt_node,
             virtual public t_rt_cpb_te<double>{
 
 public:
-    rt_cpb_fp(QObject *parent, const QDir &resource = QDir(":/config/js_config_cpb")):
+    rt_cpb_fp(QObject *parent):
         rt_node(parent),
-        t_rt_cpb_te<double>(parent, resource)
+        t_rt_cpb_te<double>(parent)
     {
-
     }
 
     virtual ~rt_cpb_fp(){;}
-
 };
 
 /*! \brief final assembly of rt_node and template of shift */
