@@ -384,13 +384,13 @@ template <class T> class t_DiadicFilterBank {
         void Reset(){
 
             time_indx = 0;
-            for(uint32_t i=0; i<M; i++){
+            for(int i=0; i<M; i++){
 
                 HP_filter[i]->Reset(NULL);
                 LP_filter[i]->Reset(NULL);
             }
 
-            for(uint32_t i=0; i<N; i++){
+            for(int i=0; i<N; i++){
 
                 prep_smpl[i] = T(0);
                 prep_indx[i] = 0;

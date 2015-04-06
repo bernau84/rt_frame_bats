@@ -30,6 +30,11 @@ public:
 
        return (irecent < A.size()) ? true : false;
     }
+    /*! \brief - test */
+    bool isfull(){
+
+       return (irecent == A.size()) ? true : false;
+    }
     /*! \brief - reading from index */
     const t_rt_ai read(int i){
 
@@ -46,19 +51,19 @@ public:
        return v;
     }
     /*! \brief - set last written */
-    void set(const t_rt_ai &v){
+    void set(const T v, const T f){
 
         if(irecent < 0) irecent = 0; //special case - not inited
-        A[irecent] = v.A;
-        I[irecent] = v.I;
+        A[irecent] = v;
+        I[irecent] = f;
     }
     /*! \brief - writing, returns number of remaining positions */
-    int append(const t_rt_ai &v){
+    int append(const T v, const T f){
 
        if(++irecent < A.size()){
 
-           A[irecent] = v.A;
-           I[irecent] = v.I;
+           A[irecent] = v;
+           I[irecent] = f;
        }
 
        return (A.size() - irecent);
@@ -70,13 +75,14 @@ public:
         I = vector<T>(d.I);
         t = d.t;
         irecent = -1;
+        return *this;
     }
 
     t_rt_slice(const t_rt_slice &d):
-        t(d.t), A(d.A), I(d.I), irecent(-1){;}
+        irecent(-1), t(d.t), A(d.A), I(d.I){;}
 
     t_rt_slice(T time = T(), int N = 0, T def = T()):
-        t(time), A(N, def), I(N), irecent(-1){;}
+        irecent(-1), t(time), A(N, def), I(N){;}
 };
 
 #endif // RT_DATATYPES_H

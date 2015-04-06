@@ -47,23 +47,23 @@ template <typename T, int N> class t_multibuffer {
         virtual int write(const T *smp);  /*!< simple append (update write pointer), return 1 with success */
         virtual int set(const T *smp);  /*!< re/write item on write pointer without it shift, return 1 if item avaiable */
 
-        virtual const T *read(int n = 0);  /*!< simple read (update read pointer), return non-null with success */
-        virtual const T *get(int n = 0);  /*!< reads item on read pointer without it shift */
+        const T *read(int n = 0);  /*!< simple read (update read pointer), return non-null with success */
+        const T *get(int n = 0);  /*!< reads item on read pointer without it shift */
 
-        virtual int shift(int len, int n = 0);     /*!< shift read pointer / dummy read = reflect overflow flag */
+        int shift(int len, int n = 0);     /*!< shift read pointer / dummy read = reflect overflow flag */
 
-        virtual int readSpace(int n = 0);      /*!< how much items can be reads/avaiable items */
-        virtual int writeSpace(int n = 0);     /*!< how much items can be write to overwite read buffer n */
+        int readSpace(int n = 0);      /*!< how much items can be reads/avaiable items */
+        int writeSpace(int n = 0);     /*!< how much items can be write to overwite read buffer n */
                                        /*! warning - it is not the free space because it can owerwrite another
                                         * read pointer and we can implement minimum fro all writeSpace because
                                         * we dont know which of N read pointers are used */
 
-        virtual bool isEmpty(int n = 0){
+        bool isEmpty(int n = 0){
 
             return (((overflow[n % N] < 0) && (wmark == rmark[n % N])));
         }
 
-        virtual bool isOver(int n = 0){
+        bool isOver(int n = 0){
 
             return (overflow[n % N] > 0) ? 1 : 0;
         }
@@ -112,7 +112,7 @@ template <typename T, int N> int t_multibuffer<T, N>::set(const T *smp){
 #endif //NO_AVAIL_CHECK
 
     lock.lockWrite();
-    buf[wmark] = smp;
+    buf[wmark] = *smp;
     lock.unlock();
     return 1;
 }
@@ -137,7 +137,7 @@ template <typename T, int N> int t_multibuffer<T, N>::write(const T *smp){
 
     lock.lockWrite();
 
-    if(smp) buf[wmark] = smp;
+    if(smp) buf[wmark] = *smp;
     //check than modify - prevent mark to point out form buffer
     //can be problem at multithread, we dont have to use lock (for simo system)
     if(wmark >= (size-1)) wmark = 0;

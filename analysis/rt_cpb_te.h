@@ -1,7 +1,7 @@
 #ifndef RT_CPB_H
 #define RT_CPB_H
 
-#include "rt_analysis.h"
+#include "base\rt_base.h"
 #include "freq_analysis.h"
 #include "freq_filtering.h"
 
@@ -11,7 +11,7 @@
 #define RT_CPB_MAX_BANDS (RT_CPB_MAX_OCTAVES*RT_CPB_MAX_BANDSINOCTAVE)
 
 
-template <typename T> class t_rt_cpb_te : public i_rt_worker
+template <typename T> class t_rt_cpb_te : public virtual i_rt_worker
 {
 private:
     int gd;    /*! groupdelay - number od deci fir taps */
@@ -20,7 +20,7 @@ private:
     double refr; /*! refresh rate */
 
     t_rt_slice<T> cpb;                     /*! active spectrum */
-    rt_idf_circ_simo<t_rt_slice<T>> *buf;  /*! spectrum buffer */
+    rt_idf_circ_simo<t_rt_slice<T> > *buf;  /*! spectrum buffer */
 
     t_DiadicFilterBank<T> *bank;   /*! decimation fir filters branch */
     t_DelayLine<T> *dline[RT_CPB_MAX_OCTAVES]; /*! group delay compensation set of fir filters */
@@ -31,20 +31,20 @@ private:
 public:
     virtual const void *read(int n){ return (buf) ? buf->read(n) : NULL; }
     virtual const void *get(int n){ return (buf) ? buf->get(n) : NULL;  }
-    virtual const int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
+    virtual int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
 
     virtual void update(const void *sample);  /*! \brief data to analyse/process */
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
-    t_rt_cpb_te(const QDir &resource = QDir(":/config/js_config_cpbanalysis.txt"));
+    t_rt_cpb_te(const QDir resource = QDir(":/config/js_config_cpbanalysis.txt"));
     virtual ~t_rt_cpb_te ();
 };
 
 /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
-template<typename T> t_rt_cpb_te<T>::t_rt_cpb_te(const QDir &resource):
-    i_rt_base(parent, resource),
-    rt_idf_circ_simo(0),
-    cpb(0, 0)
+template<typename T> t_rt_cpb_te<T>::t_rt_cpb_te(const QDir resource):
+    i_rt_worker(resource),
+    cpb(0, 0),
+    buf(NULL)
 {
     double decif[1024], passf[1] = {1.0};
 
@@ -52,18 +52,17 @@ template<typename T> t_rt_cpb_te<T>::t_rt_cpb_te(const QDir &resource):
     t_DirectFilter<double> deci(decif, gd, 2);
     t_DirectFilter<double> pass(passf, 1);
 
-    bank = new t_DiadicFilterBank<double>(pass, deci, RT_MAX_OCTAVES_NUMBER);  //naddimenzujem pro nejvyssi pocet oktav
+    bank = new t_DiadicFilterBank<double>(pass, deci, RT_CPB_MAX_OCTAVES);  //naddimenzujem pro nejvyssi pocet oktav
 
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER;                           i++) dline[i] = 0; //vynulujem
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE; i++) aline[i] = 0;
-    for(int i=0; i<RT_MAX_OCTAVES_NUMBER * RT_MAX_BANDS_PER_OCTAVE; i++) aver[i] = 0;
+    for(int i=0; i<RT_CPB_MAX_OCTAVES; i++) dline[i] = 0; //vynulujem
+    for(int i=0; i<RT_CPB_MAX_BANDS; i++) aver[i] = aline[i] = 0;
 
     //finish initialization of filters and buffer
     change();
 }
 
 /*! \brief destructor free digital filter allocation */
-template<typename T> void t_rt_cpb_te<T>::~t_rt_cpb_te(){
+template<typename T> t_rt_cpb_te<T>::~t_rt_cpb_te(){
 
     if(bank) delete bank;
 
@@ -85,10 +84,10 @@ template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
 
     //convert & test sample; we uses pointer instead of references because reference can be tested
     //only with slow try catch block which would be cover all processing loop
-    const t_rt_slice<T> *smp = dynamic_cast<t_rt_slice<T> *>(sample);
+    const t_rt_slice<T> *smp = (t_rt_slice<T> *)(sample);
     if(smp == NULL) return;
 
-    for(int i=0; i<smp->A.size; i++){
+    for(unsigned i=0; i<smp->A.size(); i++){
 
         T lp_st[RT_CPB_MAX_OCTAVES]; //
         int n = bank->Process(smp->A[i], lp_st);  //deci bank, update [0] a [n-th] octave band
@@ -118,7 +117,7 @@ template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
         //average time reached - update buffer
         if((t - cpb.t) >= refr){ //spektrum je starsi nez refresh rate
 
-            write<t_rt_slice<T> >(&cpb); //store new specrum slice
+            buf->write(&cpb); //store new specrum slice
             cpb = t_rt_slice<T>(t, octm*octn); //new spectrum init, time & number of spectral line
         }
     }
@@ -128,14 +127,14 @@ template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
  * \warning is not thread safety, caller must ensure that all pointers and interface of old
  *          buffer are unused
  */
-template <typename T> void t_rt_cpb_te::change(){
+template <typename T> void t_rt_cpb_te<T>::change(){
 
-    octn = par["Octaves"].get().toDouble();  //aktualni pocet oktav
-    octm = par["Bands"].get().toDouble();  //pocet pasem na oktavu
+    octn = par["Octaves"].get().toInt();  //aktualni pocet oktav
+    octm = par["Bands"].get().toInt();  //pocet pasem na oktavu
     refr = par["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
 
     //v1 - resize internal buffer
-    buf->resize(par["Slices"].get());
+    buf->resize(par["Slices"].get().toInt());
     //v2 - rellocate
 //    delete(buf);
 //    buf = (rt_idf_circ_simo<t_rt_slice<T>> *) new rt_idf_circ_simo<t_rt_slice<T>>(par["Slices"].get());
@@ -151,11 +150,11 @@ template <typename T> void t_rt_cpb_te::change(){
     }
 
     //napocitame jen takove zpozdeni ktere je nezbytne
-    T delay[octn];
+    int delay[octn];
     for(int i=0; i<octn; i++){
 
-        delay[i] = gd * ((1 << (octn-i)) - 1);
-        dline[i] = new t_DelayLine<T>(round(delay[i])); //inicializace delay line
+        delay[i] = round(gd * ((1 << (octn-i)) - 1));
+        dline[i] = new t_DelayLine<T>(delay[i]); //inicializace delay line
 
         //podporujem jen IIR prumerovani; lin je nerealne pro pocet koef;
         //s vyssi oktavou staci rychlejsi filtr; pod casovou konstantu 1 se ale dostat nechceme, rychlejsi uz proste nebudem

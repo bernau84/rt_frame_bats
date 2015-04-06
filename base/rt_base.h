@@ -37,7 +37,7 @@ protected:
 
     QJsonObject __set_from_binary(const QByteArray _path){
         /*! \todo - from JsonDocument binary of from remote data */
-        path = _path;
+        Q_UNUSED(_path)
         return QJsonObject();
     }
 
@@ -46,10 +46,10 @@ public:
     virtual void change() = 0;  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
     virtual ~i_rt_worker();
-    i_rt_worker(const QDir &resource = QDir()):
+    i_rt_worker(const QDir &resource):
         par(__set_from_file(resource.absolutePath())){
 
-        change();  //to apply inited parameter
+        //change();  //to apply inited parameter...but it can be problem
     }
 };
 
@@ -66,13 +66,13 @@ enum e_rt_regime {
     RT_QUEUED
 };
 
-class t_rt_base : virtual public i_rt_worker
+class i_rt_base : virtual public i_rt_worker
 {
 protected:
     e_rt_regime m_mode;
 
     //props for acces trough interface
-    std::vector<const i_rt_base *> subscribers;
+    std::vector<i_rt_base *> subscribers;
     int reader_i;
 
     //queue mode props
@@ -80,24 +80,27 @@ protected:
     i_rt_dataflow_output *pending_src;
 
     //lock for exclusive run of update
-    rt_std_lock m_lock;
+    rt_nos_lock m_lock;
 
     /*! \brief sample process & notification to follower
      */
     void __update(const void *sample){
 
-        lock.lock();
+        m_lock.lockWrite();
         i_rt_worker::update(sample); //process sample
-        lock.unlock();
+        m_lock.unlock();
 
+        bool lfirst = true;
         while(readSpace()){
 
-            const void *sample = read();
-            for(int i=0; i<subscribers.size(); i++){
+            const void *lsample = read();
+            for(unsigned i=0; i<subscribers.size(); i++){
 
-                subscribers[i]->sig_update(sample); //report each sample
-                if(!i) subscribers[i]->sig_update(this);  //only once
+                subscribers[i]->sig_update(lsample); //report each sample
+                if(lfirst) subscribers[i]->sig_update((i_rt_dataflow_output *)this);  //only 1x
             }
+
+            lfirst = false;
         }
     }
 
@@ -111,9 +114,9 @@ protected:
         //for resizing internal buffer
         while(pending_samples());
 
-        lock.lock();
+        m_lock.lockWrite();
         i_rt_worker::change(); //process sample
-        lock.unlock();
+        m_lock.unlock();
     }
 
 public:
@@ -121,7 +124,7 @@ public:
      * if they wan to work in buffered mode using i_rt_dataflow_output
      * interface
      * \return 1..RT_MAX_READERS-1, 0 is reserved for internal use */
-    int subscribe(const i_rt_base *reader){
+    int subscribe(i_rt_base *reader){
 
         if(subscribers.size() >= RT_MAX_READERS)
             return -1;
@@ -131,9 +134,9 @@ public:
     }
 
     /*! \brief calling subscibe of remote source */
-    int connection(const i_rt_base *to){
+    int connection(i_rt_base *to){
 
-        reader_i = to->subscribe(this);
+        return ((reader_i = to->subscribe(this)));
     }
 
     /*! \brief query of remaining samples to procceed
@@ -157,9 +160,10 @@ public:
 
         pending_src = src;
         if(m_mode == RT_QUEUED)
-            if(lock.locked())
+            if(m_lock.locked())
                 return;
 
+        const void *sample;
         if(reader_i >= 0)
             while(NULL != (sample = pending_src->read(reader_i)))
                 __update(sample);
@@ -173,11 +177,14 @@ public:
 
         pending_smp.push_back(sample);
         if(m_mode == RT_QUEUED)
-            if(lock.locked())
+            if(m_lock.locked())
                 return;
 
-        while(pending_smp.size())
-            __update(pending_smp.pop_front());
+        while(pending_smp.size()){
+
+            __update(pending_smp.front());
+            pending_smp.pop_front();
+        }
     }
 
     /*! \brief safe calling of change according to setup parameters
@@ -185,7 +192,7 @@ public:
      */
     virtual void sig_change(){
 
-        proc_change();
+        __change();
     }
 
 
@@ -199,8 +206,8 @@ public:
 
         if(v.isValid()){
 
-            val.set(v);  //update actual value (with all restriction applied)
-            par.replace(nval.first, val); //writeback
+            val.set(v.toJsonValue());  //update actual value (with all restriction applied)
+            par.replace(name, val); //writeback
 
             __change();
         }
@@ -208,19 +215,18 @@ public:
         return val.get();
     }
 
-    t_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
-        i_rt_worker(resource),
-        reader_i(-1),
-        pending_smp(),
-        pending_src(NULL),
-        m_mode(mode)
+    i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
+        i_rt_worker(resource)
     {
+        reader_i = -1;
+        m_mode = mode;
+        pending_src = NULL;
     }
 
-    virtual void ~t_rt_base(){
+    virtual ~i_rt_base(){
 
     }
-}
+};
 
 
 

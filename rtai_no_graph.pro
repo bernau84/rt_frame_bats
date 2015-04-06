@@ -14,17 +14,12 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp\
         analysis/freq_analysis.cpp\
-    inputs/rt_sources.cpp \
-    base/rt_basictypes.cpp \
-    base/rt_base.cpp \
-    base/rt_dataflow.cpp
+    inputs/rt_snd_in_qt.cpp
 
 HEADERS  += mainwindow.h\
 	freq_analysis.h\
-        analysis/rt_analysis.h\
         base/rt_basictypes.h \
     base/rt_multibuffer.h \
-    inputs/rt_sources.h \
     base/rt_doublebuffer.h \
     base/rt_base.h \
     analysis/freq_filtering.h \
@@ -32,11 +27,13 @@ HEADERS  += mainwindow.h\
     analysis/freq_analysis.h \
     base/rt_dataflow.h \
     base/rt_setup.h \
-    analysis/rt_cpb.h \
     base/rt_node.h \
     base/rt_common.h \
     base/rt_datatypes.h \
-    inputs/rt_snd_in.h
+    analysis/rt_cpb_te.h \
+    inputs/rt_snd_in_te.h \
+    inputs/rt_snd_in_qt.h \
+    analysis/rt_cpb_qt.h
 
 FORMS    += mainwindow.ui
 
