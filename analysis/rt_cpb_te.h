@@ -11,7 +11,7 @@
 #define RT_CPB_MAX_BANDS (RT_CPB_MAX_OCTAVES*RT_CPB_MAX_BANDSINOCTAVE)
 
 
-template <typename T> class t_rt_cpb_te : public virtual i_rt_worker
+template <typename T> class t_rt_cpb_te : public virtual i_rt_base
 {
 private:
     int gd;    /*! groupdelay - number od deci fir taps */
@@ -42,7 +42,7 @@ public:
 
 /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
 template<typename T> t_rt_cpb_te<T>::t_rt_cpb_te(const QDir resource):
-    i_rt_worker(resource),
+    i_rt_base(resource),
     cpb(0, 0),
     buf(NULL)
 {
@@ -129,12 +129,12 @@ template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
  */
 template <typename T> void t_rt_cpb_te<T>::change(){
 
-    octn = par["Octaves"].get().toInt();  //aktualni pocet oktav
-    octm = par["Bands"].get().toInt();  //pocet pasem na oktavu
+    octn = par["Octaves"].get().toDouble();  //aktualni pocet oktav
+    octm = par["Bands"].get().toDouble();  //pocet pasem na oktavu
     refr = par["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
 
     //v1 - resize internal buffer
-    buf->resize(par["Slices"].get().toInt());
+    buf->resize(par["Slices"].get().toDouble());
     //v2 - rellocate
 //    delete(buf);
 //    buf = (rt_idf_circ_simo<t_rt_slice<T>> *) new rt_idf_circ_simo<t_rt_slice<T>>(par["Slices"].get());

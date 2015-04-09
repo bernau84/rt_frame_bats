@@ -1,6 +1,6 @@
 
 {
-    "Rates":{
+    "Sampling":{
         "__info": "playback frequency"
         "__def": 8000,
         "8khz": 8000,
@@ -18,7 +18,7 @@
         "__def": 30,
         "__min": 1
     },
-    "Time": {
+    "Refresh": {
         "__info": "duration of one time slice in multibuffer",
         "slow 1s": 1.0,
         "slow 1/2s": 0.5,
@@ -30,14 +30,4 @@
         "__def": 0.125,
         "__min": 0.001
     },
-    "__refresh_rate": {
-        "__info": "inner rate of refresh multibuffer per time resolution",
-        "1x": 1.0,
-        "2x": 0.5,
-        "5x": 0.25,
-        "10x": 0.1,
-        "100x": 0.01,
-        "__def": 0.125,
-        "__min": 0.001
-    }
 }

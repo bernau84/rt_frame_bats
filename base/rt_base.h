@@ -10,15 +10,55 @@
 #include "rt_setup.h"
 #include "rt_dataflow.h"
 
-/*! \brief - interface for object with io setup encapsulation and working interface
- * child of this object are usable stand alone - need no other interface
- */
-class i_rt_worker : public virtual i_rt_dataflow_output
-{
+class i_rt_worker_io : public virtual i_rt_dataflow_output {
 
+public:
+    virtual void update(const void *sample) = 0;  /*! \brief data to analyse/process */
+    virtual void change() = 0;  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
+
+    i_rt_worker_io(){
+
+    }
+
+    virtual ~i_rt_worker_io(){
+
+    }
+};
+
+/*! \brief - worker warapper and interface boundary between object
+ * do not depend on qt signal-slot instead use queue and calabck (rt_regime option)
+ *
+ * child obejct can overload sig_update/change and proc_update/change
+ * to modify the signal <-> process mechanism
+ *
+ * io setup encapsulation
+*/
+
+enum e_rt_regime {
+
+    RT_BLOCKING = 0,
+    RT_QUEUED
+};
+
+class i_rt_base : virtual public i_rt_worker_io
+{
 protected:
+    e_rt_regime m_mode;
+
+    //props for acces trough interface
+    std::vector<i_rt_base *> subscribers;
+    int reader_i;
+
+    //queue mode props
+    std::list<const void *> pending_smp;
+    i_rt_dataflow_output *pending_src;
+
+    //lock for exclusive run of update
+    rt_nos_lock m_lock;
+
     t_collection par;  //setup io & storage
 
+private:
     //constructor helpers
     QJsonObject __set_from_file(const QString path){
 
@@ -35,59 +75,12 @@ protected:
         return QJsonObject();
     }
 
-    QJsonObject __set_from_binary(const QByteArray _path){
-        /*! \todo - from JsonDocument binary of from remote data */
-        Q_UNUSED(_path)
-        return QJsonObject();
-    }
-
-public:
-    virtual void update(const void *sample) = 0;  /*! \brief data to analyse/process */
-    virtual void change() = 0;  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
-
-    virtual ~i_rt_worker();
-    i_rt_worker(const QDir &resource):
-        par(__set_from_file(resource.absolutePath())){
-
-        //change();  //to apply inited parameter...but it can be problem
-    }
-};
-
-/*! \brief - worker warapper and interface boundary between object
- * do not depend on qt signal-slot instead use queue and calabck (rt_regime option)
- *
- * child obejct can overload sig_update/change and proc_update/change
- * to modify the signal <-> process mechanism
-*/
-
-enum e_rt_regime {
-
-    RT_BLOCKING = 0,
-    RT_QUEUED
-};
-
-class i_rt_base : virtual public i_rt_worker
-{
-protected:
-    e_rt_regime m_mode;
-
-    //props for acces trough interface
-    std::vector<i_rt_base *> subscribers;
-    int reader_i;
-
-    //queue mode props
-    std::list<const void *> pending_smp;
-    i_rt_dataflow_output *pending_src;
-
-    //lock for exclusive run of update
-    rt_nos_lock m_lock;
-
     /*! \brief sample process & notification to follower
      */
     void __update(const void *sample){
 
         m_lock.lockWrite();
-        i_rt_worker::update(sample); //process sample
+        update(sample); //process sample
         m_lock.unlock();
 
         bool lfirst = true;
@@ -115,7 +108,7 @@ protected:
         while(pending_samples());
 
         m_lock.lockWrite();
-        i_rt_worker::change(); //process sample
+        change(); //process sample
         m_lock.unlock();
     }
 
@@ -190,7 +183,7 @@ public:
     /*! \brief safe calling of change according to setup parameters
      * reset proccessing also
      */
-    virtual void sig_change(){
+    void sig_change(){
 
         __change();
     }
@@ -216,7 +209,7 @@ public:
     }
 
     i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
-        i_rt_worker(resource)
+        par(__set_from_file(resource.absolutePath()))
     {
         reader_i = -1;
         m_mode = mode;
@@ -224,7 +217,7 @@ public:
     }
 
     virtual ~i_rt_base(){
-
+        //empty
     }
 };
 

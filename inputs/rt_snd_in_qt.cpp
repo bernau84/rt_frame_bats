@@ -1,8 +1,9 @@
 
+#include <QtDebug>
 #include "rt_snd_in_qt.h"
 
 //override rt_node start
-virtual void rt_snd_in_qt::start(){
+void rt_snd_in_qt::start(){
 
     rt_node::start();
 
@@ -28,7 +29,7 @@ virtual void rt_snd_in_qt::start(){
 }
 
 //override rt_node stop
-virtual void rt_snd_in_qt::stop(){
+void rt_snd_in_qt::stop(){
 
     rt_node::stop();
 
@@ -73,7 +74,7 @@ void rt_snd_in_qt::error(void){
     }
 }
 
-virtual void rt_snd_in_qt::update(const rt_node *from){
+void rt_snd_in_qt::update(const rt_node *from){
 
     if(state == Active){
 
@@ -82,23 +83,30 @@ virtual void rt_snd_in_qt::update(const rt_node *from){
             if(!input_io || !input_audio)
                 return;
 
+            /*! todo switch for 8b/16b/32b prec */
+            double scale = 2.0 / (1 << format.sampleSize());
+            double offs = -1.0;
+
             qint64 avaiable_l = input_audio->bytesReady();//input_io->bytesAvailable();
-            short local_samples[avaiable_l];  //vycteni dostupneho
+            short local_samples[avaiable_l], *v = local_samples;  //vycteni dostupneho
             qint64 readable_l = input_io->read((char *)local_samples, avaiable_l);
-            while(readable_l--) i_rt_base::update(scale*local_samples[i]);
 
-            if(i_rt_base::readSpace())
+            double rv = offs + scale * *v++;
+            while(readable_l--) base->update(&rv);
+
+            if(base->readSpace())
                 emit on_update(this);
-        } else {
-
-            //if there is another source - multiplexing data
-            //but the purpouse is spurious
-            rt_node::update(from);
         }
+//        else
+//        {
+//            //if there is another source - multiplexing data
+//            //but the purpouse is spurious
+//            base->update(from);
+//        }
     }
 }
 
-virtual void rt_snd_in_qt::change(int sampling_rate, int refresh_rate){
+void rt_snd_in_qt::change(int sampling_rate, int refresh_rate){
 
     if(input_audio)
         delete input_audio;
@@ -112,7 +120,7 @@ virtual void rt_snd_in_qt::change(int sampling_rate, int refresh_rate){
     //variabilni
     format.setSampleRate(sampling_rate);
 
-    if (!info.isFormatSupported(format)) {
+    if (!input_dev.isFormatSupported(format)) {
 
         qWarning()  <<"default format not supported try to use nearest";
         format = input_dev.nearestFormat(format);

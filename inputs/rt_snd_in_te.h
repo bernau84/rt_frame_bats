@@ -5,7 +5,7 @@
 
 #include "base\rt_base.h"
 
-template<typename T> class t_rt_snd_in_te : public i_rt_worker {
+template<typename T> class t_rt_snd_in_te : public i_rt_base {
 
 protected:
     //local properties
@@ -42,8 +42,8 @@ public:
     virtual void change(){
 
         N = par["Multibuffer"].get().toDouble();
-        M = par["Time"].get().toDouble();  //refresh ratein ms
-        fs = par["Rates"].get().toDouble();  //actual frequency
+        M = par["Refresh"].get().toDouble();  //refresh ratein ms
+        fs = par["Sampling"].get().toDouble();  //actual frequency
         M *= (fs  / 1000.0); //refresh rate in samples number
         buf->resize(N); //novy vnitrni multibuffer
 
@@ -53,13 +53,15 @@ public:
     }
 
     t_rt_snd_in_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsource.txt")):
-        i_rt_worker(resource)
+        i_rt_base(resource)
     {
         par.replace("Rates", freq);  //update list
         change();
     }
 
-    virtual ~t_rt_snd_in_te ();
+    virtual ~t_rt_snd_in_te(){
+        //empty
+    }
 };
 
 #endif // RT_SND_IN
