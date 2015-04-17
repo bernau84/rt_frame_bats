@@ -132,7 +132,7 @@ void rt_snd_in_qt::change(int sampling_rate, int refresh_rate){
         return; //tak to neklaplo - takovy format nemame
     }
 
-    input_audio->setNotifyInterval(1000/refresh_rate);  //navic mame to od byteready
+    input_audio->setNotifyInterval(refresh_rate);  //navic mame to od byteready
     connect(input_audio, SIGNAL(notify()), SLOT(process()));
     connect(input_audio, SIGNAL(stateChanged(QAudio::State)),
             SLOT(statechanged(QAudio::State)));

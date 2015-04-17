@@ -31,7 +31,7 @@ protected slots:
     /*! \brief rt_node update is override because special handling is
      * need cause there is no rt_node source of data in normal case*/
     virtual void update(const rt_node *from);
-    virtual void change(int sampling_rate, int refresh_rate);
+    virtual void change(int sampling_rate, int refresh_rate); //[Hz], [ms]
 
 public:
     rt_snd_in_qt(const QAudioDeviceInfo &in, QObject *parent = NULL):
@@ -72,10 +72,10 @@ protected slots:
         Q_UNUSED(from);
         worker.change();  //can modify fs, refresh rate respectively
 
-        int fs = worker.setup("Sampling", 8000).toDouble();
-        int rr = worker.setup("Refresh", 20).toDouble();
+        int fs = worker.setup("Rates").toDouble();
+        int rr = 1000 * worker.setup("__refresh_rate").toDouble();
 
-        rt_snd_in_qt::change(fs, (int)(rr*fs/1000.0));
+        rt_snd_in_qt::change(fs, rr);
     }
 
 public:

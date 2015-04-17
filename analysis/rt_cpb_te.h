@@ -134,7 +134,7 @@ template <typename T> void t_rt_cpb_te<T>::change(){
     refr = par["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
 
     //v1 - resize internal buffer
-    buf->resize(par["Slices"].get().toDouble());
+//    if(buf) buf->resize(par["Slices"].get().toDouble());
     //v2 - rellocate
 //    delete(buf);
 //    buf = (rt_idf_circ_simo<t_rt_slice<T>> *) new rt_idf_circ_simo<t_rt_slice<T>>(par["Slices"].get());

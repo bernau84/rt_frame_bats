@@ -9,6 +9,7 @@
 #include <QJsonArray>
 #include <QVariant>
 #include <QVariantList>
+#include <QDebug>
 
 class t_collection;
 
@@ -38,8 +39,11 @@ private:
     void init(const QStringList &name, const QJsonArray &val){
 
         int N = qMin<int>(name.count(), val.count());
-        for(int n=0; n<N; n++)
+        for(int n=0; n<N; n++){
+
             QJsonObject::insert(name[n], val[n]);
+            if(!n) insert(DEF, val[0]);  //first as default by default (another next can override this)
+        }
     }
 
 public:
@@ -149,7 +153,6 @@ public:
     /*! \brief init from lists
      */
     t_setup_entry(const QJsonArray &val, const QStringList &name){
-
         init(name, val);
     }
 
@@ -158,8 +161,11 @@ public:
     t_setup_entry(const QJsonArray &val, const QString &unit = ""){
 
         QStringList name;
-        foreach(QJsonValue i, val)
-            name.append(i.toString() + unit);
+        for(int i=0; i<val.size(); i++){
+
+            QString tname = QString::number(val[i].toDouble());
+            name.append(tname + unit);
+        }
 
         init(name, val);
     }
@@ -211,13 +217,11 @@ public:
     bool ask(const QString &title, t_setup_entry *e = NULL){
 
         QJsonObject::iterator ai = find(title);
-        if(ai == end()){
+        if(ai == end())
+            return false;
 
-            if(e) *e = t_setup_entry(ai.value().toObject());
-            return true;
-        }
-
-        return false;
+        if(e) *e = t_setup_entry(ai.value().toObject());
+        return true;
     }
 
     /*! \brief overload operator to access full t_setup_entry (not only QObject)

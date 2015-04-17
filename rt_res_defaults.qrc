@@ -1,8 +1,8 @@
 <RCC>
     <qresource prefix="/config">
-        <file>configs\js_config_cpbanalysis.txt</file>
-        <file>configs\js_config_freqshift.txt</file>
-        <file>configs\js_config_sndsink.txt</file>
-        <file>configs\js_config_sndsource.txt</file>
+        <file>js_config_cpbanalysis.txt</file>
+        <file>js_config_freqshift.txt</file>
+        <file>js_config_sndsink.txt</file>
+        <file>js_config_sndsource.txt</file>
     </qresource>
 </RCC>

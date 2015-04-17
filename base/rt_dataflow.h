@@ -86,7 +86,7 @@ public:
 
     rt_idf_circ_simo(int _size):
         i_rt_dataflow(),
-        t_doublebuffer<T, RT_MAX_READERS>(_size)
+        t_multibuffer<T, RT_MAX_READERS>(_size)
     {
     }
 

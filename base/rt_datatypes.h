@@ -28,12 +28,12 @@ public:
     /*! \brief - test */
     bool isempty(){
 
-       return (irecent < A.size()) ? true : false;
+       return (irecent < (signed)A.size()) ? true : false;
     }
     /*! \brief - test */
     bool isfull(){
 
-       return (irecent == A.size()) ? true : false;
+       return (irecent == (signed)A.size()) ? true : false;
     }
     /*! \brief - reading from index */
     const t_rt_ai read(int i){
@@ -60,7 +60,7 @@ public:
     /*! \brief - writing, returns number of remaining positions */
     int append(const T v, const T f){
 
-       if(++irecent < A.size()){
+       if(++irecent < (signed)A.size()){
 
            A[irecent] = v;
            I[irecent] = f;

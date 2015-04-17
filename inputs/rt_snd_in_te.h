@@ -41,11 +41,12 @@ public:
     /*! \brief reinit buffers and local properties according to actual setting */
     virtual void change(){
 
-        N = par["Multibuffer"].get().toDouble();
-        M = par["Refresh"].get().toDouble();  //refresh ratein ms
-        fs = par["Sampling"].get().toDouble();  //actual frequency
-        M *= (fs  / 1000.0); //refresh rate in samples number
-        buf->resize(N); //novy vnitrni multibuffer
+        fs = par["Rates"].get().toDouble();  //actual frequency
+        N = par["Multibuffer"].get().toDouble(); //slice number
+        M = fs * par["Time"].get().toDouble();  //[Hz] * refresh rate [s] = slice point
+
+        if(buf) delete buf;
+        buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(N);
 
         //optionaly
         row = t_rt_slice<T>(nproc/fs, M, (T)0);  //recent slice reset
@@ -53,14 +54,16 @@ public:
     }
 
     t_rt_snd_in_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsource.txt")):
-        i_rt_base(resource)
+        i_rt_base(resource),
+        buf(NULL)
     {
         par.replace("Rates", freq);  //update list
         change();
     }
 
     virtual ~t_rt_snd_in_te(){
-        //empty
+
+        if(buf) delete buf;
     }
 };
 
