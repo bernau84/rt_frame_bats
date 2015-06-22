@@ -77,7 +77,6 @@ public:
     int db(const QString &name, double *v, int N){
 
         QJsonValue tv = value(name);
-
         if(!v || !N || !tv.isArray())
             return 0;
 

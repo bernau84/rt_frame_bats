@@ -1,7 +1,10 @@
 #ifndef RT_SND_IN
 #define RT_SND_IN
 
+#define RT_SND_IN_SIMUL_F   1000
+
 #include <stdint.h>
+#include <math.h>
 
 #include "base\rt_base.h"
 
@@ -28,7 +31,12 @@ public:
         if(!buf || !sample)
             return;
 
-        row.append(*(T *)sample, 2.0/fs); //sample an its freq resolution = nyquist
+#ifdef RT_SND_IN_SIMUL_F
+        T dbg = 0.8 * sin(RT_SND_IN_SIMUL_F * (2*M_PI*nproc) / fs);
+        sample = &dbg;
+#endif //RT_SND_IN_SIMUL_F
+
+        row.append(*(T *)sample, fs/2.0); //sample an its freq resolution = nyquist
         nproc += 1;
 
         if(row.isfull()){
@@ -58,6 +66,7 @@ public:
         buf(NULL)
     {
         par.replace("Rates", freq);  //update list
+        nproc = 0;
         change();
     }
 

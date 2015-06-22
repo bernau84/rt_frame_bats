@@ -2,7 +2,14 @@
 #define FREQ_RT_FILTERING_H
 
 #include <stdint.h>
+#include <stdarg.h>
 #include <vector>
+
+#define FREQ_RT_FILT_TRACE(NO, FORMAT, ...)\
+    fprintf (stderr, "%d>  "FORMAT"\n", NO, __VA_ARGS__);
+
+
+static int32_t _n_to_proc = 0;   //null dev in app doesn't need this value
 
 /*! \class template of t_pFilter
  * \brief - pure virtual ancestor of SISO digital filter
@@ -11,93 +18,101 @@
  */
 template <class T> class t_pFilter {
 
-    protected:
-        TBuffer<T>   *shift_reg;   //vytvari se instance
-        T            *shift_dat;
+    public:
 
+        enum e_filter_struct {
+
+            IIR_DIRECT1,
+            IIR_DIRECT2, 
+            IIR_LATTICE,
+            IIR_BIQUADR,
+
+            FIR_DIRECT1,
+            FIR_DELAYLN,
+            FIR_LATTICE,
+
+            FFT_FILTER
+        };
+
+    protected:
+        std::vector<T> shift_dat;
         std::vector<T> coeff_num;
         std::vector<T> coeff_den;
 
         int32_t N;            //pocet koeficientu
 
-        int32_t dec_fact;     //mozny je jen faktor > 0, < 0 nemaji uplne koser vyznam
-        int32_t act_stat;
-        int32_t typ_filt;
+        unsigned decimationf;     //mozny je jen faktor > 0, 0 funguje jako pauza (vystup se neupdatuje)
+        e_filter_struct struction;  //typ pro zpetnou identifikaci
+
+        uint64_t proc;     //index zracovaneho vzorku (inkrement)
+        T prev;    //zaloha posledniho vysledeku
 
     public:
+
         /*! \brief - defines behaviour of filter */
-        virtual T Process(const T new_smpl, int32_t *n_to_proc) = 0;
+        virtual T process(const T new_smpl, int32_t *n_to_proc = &_n_to_proc) = 0;
 
         /*! \brief - backward identification */
-        int32_t GetTyp(){
+        e_filter_struct getTyp(){
 
-            return(typ_filt);
+            return struction;
         }
 
-        /*! \brief - inicialize shift register / or delete it if NULL
-         * \warning - size of _shift_reg is expected to be N-1 (!)
+        /*! \brief - return last filtering result (cache for deciamtion purpose) */
+        T getLast(){
+
+            return prev;
+        }
+
+        /*! \brief - inicialize shift register
          */
-        void Reset(const T *_shift_reg){
+        void reset(const T def = T(0)){
 
-            int32_t wN = N - 1;
-            if((wN > 0) && (shift_reg == NULL))
-                return;
-
-            if(_shift_reg != NULL ){
-
-                shift_reg->AddSample(_shift_reg, (uint32_t *)&wN);
-            } else { //vynuluje a buffer nastavi na bgn
-
-                for(int32_t i=0; i<wN; i++)
-                    shift_dat[i] = T(0);
-            }
+            shift_dat.assign(shift_dat.size(), def);
         }
+
+        /*! \brief - set initial value (to minimize gd for example)
+         * preload sample inxed as well (to realize harmonic bank filter)
+         */
+        void reset(std::vector<T> &def){
+
+            int i=0;
+            for(; i<shift_dat.size(); i++)
+                if(i<def.size()) shift_dat[i] = def[i];
+                    else shift_dat[i] = T(0.0);
+
+            prev = i;
+        }        
 
         /*! \brief - copy of existing, except delay line */
         t_pFilter(const t_pFilter<T> &src_coeff_cpy):
             coeff_num(src_coeff_cpy.coeff_num),
             coeff_den(src_coeff_cpy.coeff_den),
-            dec_fact(src_coeff_cpy.dec_fact)
+            shift_dat(src_coeff_cpy.shift_dat),
+            struction(src_coeff_cpy.struction),
+            decimationf(src_coeff_cpy.decimationf)
         {
-
-            shift_reg = NULL;
-            act_stat  = src_coeff_cpy.dec_fact;
-            typ_filt  = src_coeff_cpy.typ_filt;
-
-            if((N = src_coeff_cpy.N) > 1){
-
-              shift_dat = (T *)calloc(N-1, sizeof(T));
-              shift_reg = new TBuffer<T>(shift_dat, N-1, BM_CIRC);
-            }
+            proc  = 0;
         }
 
         /*! \brief - new flter definition (including decimation factor) */
-        t_pFilter(const T *_coeff_num, const T *_coeff_den, int32_t _N, int32_t _dec_fact = 1)
+        t_pFilter(const T *_coeff_num, const T *_coeff_den, int32_t _N, int32_t _decimationf = 1):
+            shift_dat(0),
+            coeff_num(0),
+            coeff_den(0),
+            decimationf(_decimationf)
         {
-            if(_coeff_num) coeff_num = std::vector<T>(_coeff_num, &_coeff_num[_N]);
-            if(_coeff_den) coeff_den = std::vector<T>(_coeff_den, &_coeff_den[_N]);
-
-            dec_fact = _dec_fact;
-
-            shift_reg = NULL;
-            act_stat  = dec_fact;
-            this->typ_filt = -1;
-
-            if( (N = _N) > 1 ){
-
-              shift_dat = (T *)calloc(N-1, sizeof(T));
-              shift_reg = new TBuffer<T>(shift_dat, N-1, BM_CIRC);
-            }
+            if((N = _N) > 1) shift_dat = std::vector<T>(N - 1);            
+            if(_coeff_num) coeff_num = std::vector<T>(_coeff_num, &_coeff_num[N]);
+            if(_coeff_den) coeff_den = std::vector<T>(_coeff_den, &_coeff_den[N]);
+           
+            prev = T(0);
+            proc  = 0;
         }
 
         /*! \brief - free previsous allocation */
         virtual ~t_pFilter(){
 
-            if(shift_reg != NULL){
-
-                delete(shift_reg);
-                free(shift_dat);
-            }
         }
 };
 
@@ -110,34 +125,29 @@ template <class T> class t_DelayLine : public t_pFilter<T> {
 
     public:
         /*! \brief - simple delay buffer, ceficients doesn't play any role */
-        T Process(const T new_smpl, int32_t *n_to_proc){
+        T process(const T new_smpl, int32_t *n_to_proc = &_n_to_proc){
 
-            T *y = NULL;
-            if(this->shift_reg != NULL){
+            this->shift_dat[this->proc++ % (this->N - 1)] = new_smpl;
 
-                this->shift_reg->AddSample(new_smpl);
-                this->shift_reg->GetActual(&y);
-            }
+            //decimation - on every dec.period refresh prev cache value
+            if(0 == (*n_to_proc = (this->proc % this->decimationf)))
+                this->prev = this->shift_dat[this->proc % (this->N - 1)];
 
-            if(n_to_proc != NULL )
-                if((*n_to_proc = --this->act_stat) <= 0)
-                    this->act_stat = this->dec_fact;
-
-            return((y != NULL) ? *y : T());
+            return this->prev;
         }
 
         /*! \brief - copy constructor */
         t_DelayLine(const t_pFilter<T> &src_coeff_cpy)
                       :t_pFilter<T>(src_coeff_cpy)
         {
-            this->typ_filt = FIR_DELAYLN_STRUCT;
+            this->struction = t_pFilter<T>::FIR_DELAYLN;
         }
 
         /*! \brief - new delay line */
-        t_DelayLine(int32_t _N, int32_t _dec_fact = 1)
-                      :t_pFilter<T>(NULL, NULL, _N+1, _dec_fact)
+        t_DelayLine(int32_t _N, int32_t _decimationf = 1)
+                      :t_pFilter<T>(NULL, NULL, _N+1, _decimationf)
         {
-            this->typ_filt = FIR_DELAYLN_STRUCT;
+            this->struction = t_pFilter<T>::FIR_DELAYLN;
         }
 
         ~t_DelayLine(){;}
@@ -150,37 +160,38 @@ template <class T> class t_DelayLine : public t_pFilter<T> {
 template <class T> class t_CanonFilter : public t_pFilter<T> {
 
     public:
-        /*! \brief - decimation throw up */
-        T Process(const T new_smpl, int32_t *n_to_proc){
+        /*! \brief - not for efective decimation */
+        T process(const T new_smpl, int32_t *n_to_proc = &_n_to_proc){
 
             T v_i, v_n = new_smpl, y = T(0);
 
             for(int32_t i=1; i<this->N; i++){
 
-                this->shift_reg->GetSample(&v_i);
+                v_i = this->shift_dat[(this->proc + i - 1) % (this->N - 1)];
                 v_n -= this->coeff_den[this->N-i] * v_i;
                 y   += this->coeff_num[this->N-i] * v_i;
             }
 
             y += this->coeff_num[0] * v_n;
-            this->shift_reg->AddSample(v_n);
+            this->shift_dat[this->proc % (this->N - 1)] = v_n;
 
-            if(n_to_proc != NULL)
-                if((*n_to_proc = --this->act_stat) <= 0)
-                    this->act_stat = this->dec_fact;
-            return y;
+            //decimation - on every dec.period refresch prev cache value
+            if(0 == (*n_to_proc = (this->proc++ % this->decimationf)))
+                this->prev = y;
+
+            return this->prev;
         }
 
         t_CanonFilter(const t_pFilter<T> &src_coeff_cpy)
                       :t_pFilter<T>(src_coeff_cpy)
         {
-            this->typ_filt = IIR_DIRECT1_STRUCT;
+            this->struction = t_pFilter<T>::IIR_DIRECT1;
         }
 
-        t_CanonFilter(const T *_coeff_num, const T *_coeff_den, int32_t _N, int32_t _dec_fact = 1)
-                      :t_pFilter<T>(_coeff_num, _coeff_den, _N, _dec_fact)
+        t_CanonFilter(const T *_coeff_num, const T *_coeff_den, int32_t _N, int32_t _decimationf = 1)
+                      :t_pFilter<T>(_coeff_num, _coeff_den, _N, _decimationf)
         {
-            this->typ_filt = IIR_DIRECT1_STRUCT;
+            this->struction = t_pFilter<T>::IIR_DIRECT1;
         }
 
         ~t_CanonFilter(){;}
@@ -196,7 +207,7 @@ template <class T> class t_BiQuadFilter : public t_pFilter<T>{
 
     public:
 
-        T Process(const T new_smpl, int32_t *n_to_proc){
+        T process(const T new_smpl, int32_t *n_to_proc = &_n_to_proc){
 
            T v_n = new_smpl, y = T(0);
            //vshift_dat po dvojicich od nejnovejsiho - jinak nez u Canon!!
@@ -214,21 +225,23 @@ template <class T> class t_BiQuadFilter : public t_pFilter<T>{
                 v_n = y;
            }
 
-           if(n_to_proc != NULL)
-               if((*n_to_proc = --this->act_stat) <= 0)
-                   this->act_stat = this->dec_fact;
+            //decimation - on every dec.period refresch prev cache value
+            if(0 == (*n_to_proc = (this->proc++ % this->decimationf)))
+                this->prev = y;
 
-           return y;
+            return this->prev;
         }
 
         t_BiQuadFilter(const t_pFilter<T> &src_coeff_cpy)
                        :t_pFilter<T>(src_coeff_cpy){
-            this->typ_filt = IIR_BIQUADR_STRUCT;
+
+            this->struction = t_pFilter<T>::IIR_BIQUADR;
         }
 
-        t_BiQuadFilter(const T *_coeff_num, const T *_coeff_den, int32_t _N, int32_t _dec_fact = 1)
-                       :t_pFilter<T>(_coeff_num, _coeff_den, 3*_N, _dec_fact){
-            this->typ_filt = IIR_BIQUADR_STRUCT;
+        t_BiQuadFilter(const T *_coeff_num, const T *_coeff_den, int32_t _N, int32_t _decimationf = 1)
+                       :t_pFilter<T>(_coeff_num, _coeff_den, 3*_N, _decimationf){
+
+            this->struction = t_pFilter<T>::IIR_BIQUADR;
         }
 
         ~t_BiQuadFilter(){;}
@@ -241,38 +254,34 @@ template <class T> class t_BiQuadFilter : public t_pFilter<T>{
 template <class T> class t_DirectFilter : public t_pFilter<T>{
 
     public:
-        T Process(const T new_smpl, int32_t *n_to_proc){
+        T process(const T new_smpl, int32_t *n_to_proc = &_n_to_proc){
 
-            T v_i, y = T(0);
+            if(0 == (*n_to_proc = (this->proc++ % this->decimationf))){
 
-            if( --this->act_stat <= 0 ){
-
-                y = new_smpl * this->coeff_num[0];
-                this->act_stat = this->dec_fact;
-
+                this->prev = new_smpl * this->coeff_num[0];
                 for(int32_t i=1; i<this->N; i++ ){
 
-                        this->shift_reg->GetSample(&v_i);
-                        y += this->coeff_num[this->N-i]*v_i;
+                    T v_i = this->shift_dat[(this->proc + i - 1) % (this->N - 1)];
+                    this->prev += this->coeff_num[this->N-i]*v_i;  //reverse order of coefs assumed or symetry...hm
                 }
+
+                FREQ_RT_FILT_TRACE(1, "fir-proc-tick on %d, res %f", this->proc++, this->prev);
             }
 
-            this->shift_reg->AddSample(new_smpl);
-
-            if(n_to_proc != NULL)
-                *n_to_proc = this->act_stat;
-
-            return y;
+            this->shift_dat[this->proc % (this->N - 1)] = new_smpl;
+            return this->prev;  //pokud vypocet neprobihal (kvuli decimaci, vracime posledni vysledek)
         }
 
         t_DirectFilter(const t_pFilter<T> &src_coeff_cpy)
                        :t_pFilter<T>(src_coeff_cpy){
-            this->typ_filt = FIR_DIRECT1_STRUCT;
+
+            this->struction = t_pFilter<T>::FIR_DIRECT1;
         }
 
-        t_DirectFilter(const T *_coeff_num, int32_t _N, int32_t _dec_fact = 1)
-                       :t_pFilter<T>(_coeff_num, NULL, _N, _dec_fact){
-            this->typ_filt = FIR_DIRECT1_STRUCT;
+        t_DirectFilter(const T *_coeff_num, int32_t _N, int32_t _decimationf = 1)
+                       :t_pFilter<T>(_coeff_num, NULL, _N, _decimationf){
+
+            this->struction = t_pFilter<T>::FIR_DIRECT1;
         }
 
         ~t_DirectFilter(){;}
@@ -285,7 +294,7 @@ template <class T> class t_DirectFilter : public t_pFilter<T>{
  */
 template <class T> class t_LatticeFilter : public t_pFilter<T>{
     public:
-        T Process(const T new_smpl, int32_t *n_to_proc){
+        T process(const T new_smpl, int32_t *n_to_proc = &_n_to_proc){
 
             T f, f_i, g, g_i;
 
@@ -299,22 +308,24 @@ template <class T> class t_LatticeFilter : public t_pFilter<T>{
                 g = g_i; f = f_i;
             }
 
-           if(n_to_proc != NULL)
-               if((*n_to_proc = --this->act_stat) <= 0)
-                   this->act_stat = this->dec_fact;
+            //decimation - on every dec.period refresch prev cache value
+            if(0 == (*n_to_proc = (this->proc++ % this->decimationf)))
+                this->prev = g; //or f (?!)
 
-           return g; //or f (?!)
+           return this->prev;
         }
 
 
         t_LatticeFilter(t_pFilter<T> &src_coeff_cpy)
                        :t_pFilter<T>(src_coeff_cpy){
-            this->typ_filt = FIR_LATTICE_STRUCT;
+
+            this->struction = t_pFilter<T>::FIR_LATTICE;
         }
 
-        t_LatticeFilter(const T *_coeff_num, int32_t _N, int32_t _dec_fact = 1)
-                       :t_pFilter<T>(_coeff_num, NULL, _N, _dec_fact){
-            this->typ_filt = FIR_LATTICE_STRUCT;
+        t_LatticeFilter(const T *_coeff_num, int32_t _N, int32_t _decimationf = 1)
+                       :t_pFilter<T>(_coeff_num, NULL, _N, _decimationf){
+
+            this->struction = t_pFilter<T>::FIR_LATTICE;
         }
 
         ~t_LatticeFilter(){;}
@@ -322,118 +333,82 @@ template <class T> class t_LatticeFilter : public t_pFilter<T>{
 
 /*! \class - template of t_DiadicFilterBank SIMO system
  * \brief - realize decimation tree with diadic step while LP_filter decimate with factor 2 (and it should)
- * impemented algorithm is produce one 2 samples per sample - duration of every Process is constant and limited.
+ * impemented algorithm is produce one 2 samples per sample - duration of every process is constant and limited.
  * for resamplink line only the HP filter should be identity function
  * M - number of stages
  */
-template <class T> class t_DiadicFilterBank {
+template <class T, int32_t DIADTREE_MAX_STAGES> class t_DiadicFilterBank {
 
     private:
-        t_pFilter<T> **HP_filter;
-        t_pFilter<T> **LP_filter;
+        t_pFilter<T> *HP_filter[DIADTREE_MAX_STAGES];
+        t_pFilter<T> *LP_filter[DIADTREE_MAX_STAGES];
 
-        T          *prep_smpl; //output data for higher stage
-        int32_t    *prep_indx; //indexes
-
-        int32_t    M;          //number of stages
-        int32_t    N;          //internal buffer size
-
-        int32_t    time_indx;
+        int32_t    in;  //sample index
     public:
-        /*! \brief - computes highest and one of lower stage
+        /*! \brief - computes highest freq and one of lower stage
          * \param - sum_rslr is external buffer where output of all stages can be stored (M size is assumed)
          * \returns - number of additional stage; fist call reurns 0, because only highest band is updated (stage0!!!)
          */
-        int32_t Process(const T new_smpl, T *sum_rslt){
-
-            T t_wrt_val;
-            int32_t t_wrt_ind, to_process;
+        int32_t process(const T new_smpl, T *sum_rslt){
 
             //nejvyssi oktava
-            sum_rslt[0] = HP_filter[0]->Process( new_smpl, NULL );
-            t_wrt_val   = LP_filter[0]->Process( new_smpl, &to_process );
-            if( to_process == 1 ){  //musime brat prvni vzorek jako sudy. liche vzorky by se nedali umistovat v cyklu
+            sum_rslt[0] = HP_filter[0]->process(new_smpl);
+            LP_filter[0]->process(new_smpl);
 
-                prep_smpl[time_indx+1] = t_wrt_val;
-                prep_indx[time_indx+1] = 1;
-            }
+            //count next stage index 
+            //every next stage runs at half speed - that ensures modulo 
+            //plus we need a shift each stage process to hamrmonize analysis speed
+            int32_t m = 1;
+            for(; m<DIADTREE_MAX_STAGES; m++)
+                if(0 == ((2^(m-1)+1 + in) % (2^m))){  //offset + step % period
 
-            int32_t m = prep_indx[time_indx];
+                    //pocitame dalsi z nizsich stupnu
+                    sum_rslt[m] = HP_filter[m]->process(LP_filter[m-1]->getLast());
+                    LP_filter[m]->process(LP_filter[m-1]->getLast());
 
-            if(time_indx > 0){
+                    FREQ_RT_FILT_TRACE(2, "%d-bank-proc on %d", m, in);  
+                    break;              
+                }
 
-                sum_rslt[m] = HP_filter[m]->Process( prep_smpl[time_indx], NULL );
-                t_wrt_val   = LP_filter[m]->Process( prep_smpl[time_indx], &to_process );
-                if(m < (M-1)){
-
-                    if(to_process == 1){      //aby posledni platny stupen na (poz. t = N/2) uz dalsi pozici nezapisoval
-
-                        t_wrt_ind = time_indx + (0x1 << (m-1));
-                        prep_smpl[t_wrt_ind] = t_wrt_val;
-                        prep_indx[t_wrt_ind] = m+1;
-                    }
-                } else prep_smpl[m+1] = t_wrt_val; //backup, vysledek posledni LP filtrace (u CPB zahazujem)
-            } else sum_rslt[m] = prep_smpl[m+1]; //vratime jako vysledek filtrace v poseldnim stupni (tak aby sme vzdy meli 2 vysledky, muzem nemusime zpracovavat)
-
-            time_indx = (time_indx+1)%N;
-            return m;       //pri vypoctu prvniho stupne se vraci 0, protoze je updatovan jen jeden stupen, stupen 0!!! (+ posledni LP filtrace)
+            in++;
+            return m;
         }
 
         /*! \brief - Reset history (internal and filters)
          */
-        void Reset(){
+        void reset(){
 
-            time_indx = 0;
-            for(int i=0; i<M; i++){
+            in = 0;
+            for(int i=0; i<DIADTREE_MAX_STAGES; i++){
 
-                HP_filter[i]->Reset(NULL);
-                LP_filter[i]->Reset(NULL);
-            }
-
-            for(int i=0; i<N; i++){
-
-                prep_smpl[i] = T(0);
-                prep_indx[i] = 0;
+                HP_filter[i]->reset();
+                LP_filter[i]->reset();
             }
         }
 
         /*! \brief - allocate resampling LP line and analytic HP filter according to given teplates
          */
         template<template<class> class LP, template<class> class HP>
-            t_DiadicFilterBank(const LP<T> &_HP_filter, const HP<T> &_LP_filter, int32_t _M ){
+            t_DiadicFilterBank(const LP<T> &_HP_filter, const HP<T> &_LP_filter){
 
-            time_indx = 0;
-            if((M = _M) > 0){
+            for(int i=0; i<DIADTREE_MAX_STAGES; i++){
 
-                N = 0x1 << (M-1);
-                HP_filter = new t_pFilter<T>*[M];
-                LP_filter = new t_pFilter<T>*[M];
-
-                prep_smpl = new T[N+1]; //+1 for last LP filtration (unused for CPB for example)
-                prep_indx = new int32_t[N];
-
-                for(int32_t i=0; i<M; i++){
-
-                    HP_filter[i] = new HP<T>(_HP_filter);
-                    LP_filter[i] = new LP<T>(_LP_filter);
-                }
-
-                Reset();
+                HP_filter[i] = new HP<T>(_HP_filter);
+                LP_filter[i] = new LP<T>(_LP_filter);
             }
+
+            reset();
         }
 
         /*! \brief - destroy filters and imed buffers
          */
         ~t_DiadicFilterBank(){
 
-            for( int i=0; i<N; i++ ){
+            for(int i=0; i<DIADTREE_MAX_STAGES; i++){
 
                 delete(HP_filter[i]);
                 delete(LP_filter[i]);
             }
-
-            delete HP_filter; delete LP_filter;
-            delete prep_indx; delete prep_smpl;
         }
 
 };
@@ -452,11 +427,11 @@ template <class T, int32_t PACKETTREE_MAX_STAGES> class t_PacketTree{
 
     public:
 
-        /*! \brief - Process one sample
+        /*! \brief - process one sample
          *  \return - 1 if we reach the last stage, results in sum_rslt are valid now
          *  size of output buffer rum_rslt must be at least 2^M (!)
          */
-        int32_t Process(const T new_smpl, T *sum_rslt){
+        int32_t process(const T new_smpl, T *sum_rslt){
 
             int32_t i, j, to_process = 1;
             int32_t rev_lo, rev_hi;
@@ -469,8 +444,8 @@ template <class T, int32_t PACKETTREE_MAX_STAGES> class t_PacketTree{
                 rev_hi = 1; rev_lo = 0;
                 for(j=0; j<(1<<i); j++){
 
-                    part_rslt[2*j+rev_lo] = LP_filter[i][j]->Process(back_rslt[j], &to_process);
-                    part_rslt[2*j+rev_hi] = HP_filter[i][j]->Process(back_rslt[j], &to_process);  //&to_process by melo byt u obou stejne
+                    part_rslt[2*j+rev_lo] = LP_filter[i][j]->process(back_rslt[j], &to_process);
+                    part_rslt[2*j+rev_hi] = HP_filter[i][j]->process(back_rslt[j], &to_process);  //&to_process by melo byt u obou stejne
 
                     if(rev_hi){
 
@@ -491,13 +466,13 @@ template <class T, int32_t PACKETTREE_MAX_STAGES> class t_PacketTree{
 
         /*! \brief - Resets all filters
          */
-        void Reset(){
+        void reset(){
 
             for(int32_t i=0; i<M; i++ )
                 for(int32_t j=0; j<(1<<i); j++){
 
-                    HP_filter[i][j]->Reset(NULL);
-                    LP_filter[i][j]->Reset(NULL);
+                    HP_filter[i][j]->reset();
+                    LP_filter[i][j]->reset();
                 }
         }
 
@@ -541,6 +516,239 @@ template <class T, int32_t PACKETTREE_MAX_STAGES> class t_PacketTree{
                 if(LP_filter[i]) delete(LP_filter[i]);
             }
         }
+};
+
+
+/*! \class - template of t_DiadicFilterBank SIMO system
+ * \brief - realize decimation tree with diadic step while LP_filter decimate with factor 2
+ * impemented algorithm is produce one 2 samples per sample - duration of every process is constant and limited.
+ * M - number of stages
+ */
+template <class T, int32_t DIADTREE_MAX_STAGES> class t_DiadicFilterBankH {
+
+    private:
+        t_DirectFilter<T> LP_filter[DIADTREE_MAX_STAGES];
+        int32_t    in;  //sample index
+
+        unsigned M;
+        unsigned N;
+
+    public:
+        /*! \brief - computes highest freq and one of lower stage
+         * \param - sum_rslr is external buffer where output of all stages can be stored
+         */
+        int32_t process(const T new_smpl, T (*sum_rslt)[DIADTREE_MAX_STAGES]){
+
+            //nejvyssi oktava
+            sum_rslt[0] = LP_filter[0].process(new_smpl);
+
+            //count next stage index 
+            //every next stage runs at half speed - that ensures modulo 
+            //plus we need a shift each stage process to hamrmonize analysis speed
+            int32_t m = 1;
+            for(; m<M; m++)
+                if(0 == ((2^(m-1)+1 + in) % (2^m))){  //offset + step % period
+
+                    //pocitame dalsi z nizsich stupnu
+                    sum_rslt[m] = LP_filter[m].process(LP_filter[m-1]->GetLast());
+                    FREQ_RT_FILT_TRACE(2, "%d-bank-proc on %d", m, in);  
+                    break;              
+                }
+
+            in++;
+            return m;
+        }
+
+        /*! \brief - Reset history (internal and filters)
+         */
+        void reset(){
+
+            in = 0;
+            for(int i=0; i<M; i++)
+                LP_filter[i].reset();
+        }
+
+        /*! \brief - allocate resampling LP line and analytic HP filter according to given teplates
+         */
+        t_DiadicFilterBankH(const T halfband_coef[], unsigned  _N, unsigned _M):
+            M(_M),
+            N(_N)
+        {
+
+            if(!M*N)
+                return;
+
+            for(int i=0; i<M; i++)
+                LP_filter[i] = t_DirectFilter<T>(halfband_coef, 0, 2);
+
+            reset();
+        }
+
+        /*! \brief - destroy filters and imed buffers
+         */
+        ~t_DiadicFilterBankH(){;}
+
+};
+
+/*! \class Packet (Wavelet) Tree Harmonized
+ * heavy use of recursion (in runtime & constructor)
+ * procceed exactlu M stages every sample
+ * each band has slightly different group delay - check the order of update on return from proccess
+ */
+template <class T, int32_t PACKETTREE_MAX_STAGES> class t_PacketTreeH{
+
+    private:
+
+        struct t_packet_node {
+
+            t_DirectFilter<T> HP_filter;    //working hp 2x decimation fir filter - ticks on odd samples - see reset method()
+            t_DirectFilter<T> LP_filter;    //working hp 2x decimation fir filter - ticks on event samples (unchanged)
+
+            int HP_succ_inx;    //follow node index
+            int LP_succ_inx;
+
+            unsigned code;          //binary code of node == frequency band (after decimation-aliasing compesation using mirroring in HP)
+            unsigned stage;         //node stage  
+        } node[(0x1 << PACKETTREE_MAX_STAGES) - 1]; //2^M - 1; pro upresneni M=3 -> 4 nody na vystupu (8 pasem) 
+
+
+        unsigned M; //actual number of stages
+        unsigned N; //filter length
+
+        uint64_t in;    //sample index
+
+        /*! recursively generate packet tree network
+        */
+        int __interconnect(unsigned m = 0, unsigned c = 0){
+
+            static unsigned n = 0;
+            unsigned i = n;     //index of this node
+
+            node[i].stage = m;
+            node[i].code = c;
+            
+            if(++n >= sizeof(node)){
+
+                FREQ_RT_FILT_TRACE(1, "!!node index %d overflow!!", n); 
+                return -1;
+            }  
+
+            if(m < M){
+
+                node[i].LP_succ = __interconnect(m+1, (c << 1) + 1);
+                node[i].HP_succ = __interconnect(m+1, (c << 1) + 0);
+            }
+
+            return i;
+        }
+
+
+        /*! recursion core half-band complementary filters
+         */
+        unsigned run(const T inp, unsigned n = 0){
+
+            FREQ_RT_FILT_TRACE(2, "node %d on sample %d", n, in);
+
+            unsigned l_tick, h_tick;
+            node[n].LP_filter.process(inp, &l_tick);
+            node[n].HP_filter.process(inp, &h_tick);
+
+            if(l_tick == 0 && h_tick == 0)
+                FREQ_RT_FILT_TRACE(3, "!!concurency on node %d!!", n);              
+
+            if((n >= 0) && (node[n].stage < M)){
+
+                if(l_tick == 0) {
+
+                    inp = node[n].LP_filter.getLast();
+                    return run(inp, node[n].LP_succ_inx);
+                } 
+
+                if(h_tick == 0) {
+
+                    inp = node[n].HP_filter.getLast();
+                    inp *= (0x1 & (in << node[n].stage)) ? T(-1.0) : T(1.0);  //fs/2 shift (act as mirroring here) to prevent reorder freq after decimation
+                    return run(inp, node[n].HP_succ_inx);
+                }
+
+                FREQ_RT_FILT_TRACE(4, "!!no tick on node %d!!", n)
+                return -1;
+            } 
+
+            return n;
+        }        
+
+    public:
+
+        /*! \brief - recursively process one sample
+         *  size of output buffer rum_rslt must be at least 2^M (!)
+         */
+        int32_t process(const T new_smpl, T (*sum_rslt)[0x1 << PACKETTREE_MAX_STAGES]){
+
+            unsigned i = run(new_smpl);
+
+            sum_rslt[node[i].code + 0] = node[i].LP_filter.getLast(); //not sure which - update both
+            sum_rslt[node[i].code + 1] = node[i].HP_filter.getLast();
+
+            FREQ_RT_FILT_TRACE(5, "band %d(+1) updated on sample %d", node[i].code, in);
+            in += 1;
+
+            return in;
+        }
+
+        /*! \brief - resets all filters
+         * hp is initiated to decimate avery odd sample, lp will decimate to even
+         */
+        void reset(){
+
+            std::vector<T> pre(1);  //preloads HP to ensure shift when it tick
+            pre[0] = T(0.0);
+
+            for(int32_t n = 0; n < sizoef(node); n++){
+
+                node[n].HP_filter.reset(pre);
+                node[n].LP_filter.reset();
+            }
+        }
+
+        /*! \brief - creates all M^2 packet tree filters
+         */
+        t_PacketTreeH(const T halband_coef[], unsigned  _N, unsigned _M):
+            M(_M),
+            N(_N)
+        {
+
+            if(!M*N)
+                return;
+
+            const T lp_coeff[N];  //temp
+            const T hp_coeff[N];
+
+            for(int32_t i = 0; i< N ; i++){
+
+               hp_coeff[i] = lp_coeff[i] = halband_coef[i];
+               hp_coeff[i] *= (i & 1) ? T(-1.0) : T(1.0);  //shift fs/2 to create high pass
+            }
+
+
+           for(int32_t n = 0; n < sizoef(node); n++){ //iterrate trought all filters
+
+                node[n].HP_filter = t_DirectFilter<T>(hp_coeff, 0, 2);
+                node[n].LP_filter = t_DirectFilter<T>(lp_coeff, 0, 2);
+
+                node[n].HP_succ_inx = -1;
+                node[n].LP_succ_inx = -1;
+            }
+
+            reset(); //reset + delay output HP filters for 1 sample 
+
+            __interconnect(); //connection between nodes & nodes role assesment
+        }
+
+        /*! \brief - destroy all filters
+         */
+        ~t_PacketTreeH(){;}
+
 };
 
 #endif // FREQ_RT_FILTERING_H

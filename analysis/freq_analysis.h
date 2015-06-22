@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "rw_buffer.h" //pozor verze s rychlou metodou AddSample()
-//+ k projektu pridat my_fft.cpp
-
 #define IIR_DIRECT1_STRUCT   0x00
 #define IIR_DIRECT2_STRUCT   0x01
 #define IIR_LATTICE_STRUCT   0x02
@@ -100,10 +97,10 @@ typedef struct {
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-extern void     my_filter(FILTER_DATA *f_specify, double input_x[], int x_N, double init_state[], double *output_y);
-extern t_Compl  *my_fft(double *data_r, double *data_i, unsigned int *Nd, int w_typ);
-extern t_Compl  *my_fft(double *data_r, double *data_i, unsigned int *Nd);
-extern t_Compl  *my_fft(double *data_r, double *data_i, FFT_CONTEXT *con);
+extern void     f_filter(FILTER_DATA *f_specify, double input_x[], int x_N, double init_state[], double *output_y);
+extern t_Compl  *f_fft(double *data_r, double *data_i, unsigned int *Nd, int w_typ);
+extern t_Compl  *f_fft(double *data_r, double *data_i, unsigned int *Nd);
+extern t_Compl  *t_fft(double *data_r, double *data_i, FFT_CONTEXT *con);
 
 extern void gen_window( double *rslt, int N, unsigned int type );
 extern int  init_fftcontext(FFT_CONTEXT *con, int _N_FFT, int _WIN, int WinComp, int OvrComp);

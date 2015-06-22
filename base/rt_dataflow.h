@@ -58,14 +58,14 @@ protected:
 
 public:
     //for internal working object usage
-    virtual int write(const void *smp){ return write((T *)smp); }
-    virtual int set(const void *smp){ return set((T *)smp); }
-    virtual int writeSpace(){ return writeSpace(); }
+    virtual int write(const void *smp){ return t_multibuffer<T, RT_MAX_READERS>::write((T *)smp); }
+    virtual int set(const void *smp){ return t_multibuffer<T, RT_MAX_READERS>::set((T *)smp); }
+    virtual int writeSpace(){ return t_multibuffer<T, RT_MAX_READERS>::writeSpace(); }
 
     //extern object can read too (but cannot change)
-    virtual const void *read(int n = 0){ return((const void *)read(n)); }
-    virtual const void *get(int n = 0){ return ((const void *)get(n)); }
-    virtual int readSpace(int n = 0){ return readSpace(n); }
+    virtual const void *read(int n = 0){ return((const void *)t_multibuffer<T, RT_MAX_READERS>::read(n)); }
+    virtual const void *get(int n = 0){ return ((const void *)t_multibuffer<T, RT_MAX_READERS>::get(n)); }
+    virtual int readSpace(int n = 0){ return t_multibuffer<T, RT_MAX_READERS>::readSpace(n); }
 
     /*! \brief resize & reset */
     virtual void resize(int _size){

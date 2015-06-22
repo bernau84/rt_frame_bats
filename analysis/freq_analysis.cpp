@@ -19,14 +19,16 @@
 /* input_x = x(n-N+1), x(n-N+2), ..., x(n-1), x(n) => !v poli od nejstarsiho! */
 /* input_x[0] = x(n-N-1); input_x[N-1] = x(n) */
 
-void my_filter( FILTER_DATA *f_specify, double input_x[], int x_N, double init_state[], double *output_y ){
+void f_filter( FILTER_DATA *f_specify, double input_x[], int x_N, double init_state[], double *output_y ){
 
         switch( f_specify->structure ){
                 case( IIR_DIRECT2_STRUCT ): {
 
-                        /* v[n] = x[n] - (a[1]*v[n-1]+a[2]*v[n-2]+...+a[den_N-1]*v[n-den_N+1]
-                        a[0]*y[n] = b[0]*v[n]+b[1]*v[n-1]+...+b[num_N-1]*v[n-num_N+1]
-                        init_state = { v[n-1], v[n-2], ... v[n-max(den_N,num_N)+1]}         */
+                        /*
+                            v[n] = x[n] - (a[1]*v[n-1]+a[2]*v[n-2]+...+a[den_N-1]*v[n-den_N+1]
+                            a[0]*y[n] = b[0]*v[n]+b[1]*v[n-1]+...+b[num_N-1]*v[n-num_N+1]
+                            init_state = {v[n-1], v[n-2], ... v[n-max(den_N,num_N)+1]}
+                        */
 
                         int int_N = ( f_specify->den_N > f_specify->num_N ) ?
                                         (x_N + f_specify->den_N - 1) : (x_N + f_specify->num_N - 1);
@@ -83,7 +85,7 @@ void my_filter( FILTER_DATA *f_specify, double input_x[], int x_N, double init_s
 
                         unsigned int int_n = x_N; t_Compl *spect;
 
-                        spect = my_fft( input_x, NULL, &int_n );  //FFT
+                        spect = f_fft( input_x, NULL, &int_n );  //FFT
 
                         if(int_n == (unsigned)x_N){  //pokud byl pocet prvku jiny nec 2^M nema cenu pokracovat
 
@@ -103,7 +105,7 @@ void my_filter( FILTER_DATA *f_specify, double input_x[], int x_N, double init_s
                                 for( unsigned int i=f_specify->den_N; i<int_n; i++ )
                                     input_i[i]= spect[i].imag / int_n; //dokonceni normalizace
 
-                                free(spect); spect = my_fft( input_r, input_i, &int_n ); //IFFT
+                                free(spect); spect = f_fft( input_r, input_i, &int_n ); //IFFT
 
                                 //vysledek je kruhove posunuty o 1 a zrcadlovy
                                 output_y[0] = spect[0].real; for( int i=1; i<x_N; i++ ) output_y[i] = spect[int_n-i].real;
@@ -132,7 +134,7 @@ unsigned int BitReverz( unsigned int cislo, int pow ){
 
 //------------------------------------------------------------------------------
 //KLASICKA FFT
-t_Compl *my_fft( double *data_r, double *data_i, unsigned int *Nd ) {
+t_Compl *f_fft( double *data_r, double *data_i, unsigned int *Nd ) {
 
         int i_fft=0, i_TwF=0, L=0;
         int M = (int)ceil(log(*Nd)/log(2.00));
@@ -179,7 +181,7 @@ t_Compl *my_fft( double *data_r, double *data_i, unsigned int *Nd ) {
 }
 //------------------------------------------------------------------------------
 //FFT DOPLNENA O OKYNKA
-t_Compl *my_fft( double *data_r, double *data_i, unsigned int *Nd, int w_typ ){
+t_Compl *f_fft( double *data_r, double *data_i, unsigned int *Nd, int w_typ ){
 
         int i_fft=0, i_TwF=0, L=0;
         int M = (int)ceil(log(*Nd)/log(2.00));
@@ -228,7 +230,7 @@ t_Compl *my_fft( double *data_r, double *data_i, unsigned int *Nd, int w_typ ){
 
 //------------------------------------------------------------------------------
 //FFT pro opakovane pouziti
-t_Compl *my_fft(double *r_data, double *i_data, FFT_CONTEXT *con){
+t_Compl *f_fft(double *r_data, double *i_data, FFT_CONTEXT *con){
 
         int i_fft, i_TwF, L;
         t_Compl Left, Rigth;

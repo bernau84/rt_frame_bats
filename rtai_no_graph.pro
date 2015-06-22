@@ -4,26 +4,28 @@
 #
 #-------------------------------------------------
 
-QT       += core widgets\
+QT       += core\
 	multimedia
+
+QT       -= gui
 
 TARGET = rtai
 TEMPLATE = app
 
+CONFIG   += console
+CONFIG   -= app_bundle
 
 SOURCES += main.cpp\
-        mainwindow.cpp\
         analysis/freq_analysis.cpp\
     inputs/rt_snd_in_qt.cpp
 
-HEADERS  += mainwindow.h\
+HEADERS  +=\
 	freq_analysis.h\
         base/rt_basictypes.h \
     base/rt_multibuffer.h \
     base/rt_doublebuffer.h \
     base/rt_base.h \
     analysis/freq_filtering.h \
-    analysis/rw_buffer.h \
     analysis/freq_analysis.h \
     base/rt_dataflow.h \
     base/rt_setup.h \
@@ -33,9 +35,10 @@ HEADERS  += mainwindow.h\
     analysis/rt_cpb_te.h \
     inputs/rt_snd_in_te.h \
     inputs/rt_snd_in_qt.h \
-    analysis/rt_cpb_qt.h
+    analysis/rt_cpb_qt.h \
+    base/rt_tracing.h
 
-FORMS    += mainwindow.ui
+FORMS    +=
 
 OTHER_FILES += \
     js_config_sndsource.txt \

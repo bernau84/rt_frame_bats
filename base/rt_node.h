@@ -1,7 +1,7 @@
 #ifndef RT_NODE
 #define RT_NODE
 
-#include <assert.h>
+//#include <assert.h>
 #include <QObject>
 #include <QtGlobal>
 #include "rt_base.h"
@@ -36,18 +36,18 @@ public:
     i_rt_base *m_src;
 
 signals:
-    void on_update(rt_node *);   //zmena zvnejsi - signal vede na slot change
-    void on_change(rt_node *);  //propagace zmeny zevnitr k navazanym prvkum
+    void on_update(const rt_node *);   //zmena zvnejsi - signal vede na slot change
+    void on_change(const rt_node *);  //propagace zmeny zevnitr k navazanym prvkum
 
 protected slots:
 
-    virtual void update(rt_node *from){
+    virtual void update(const rt_node *from){
 
-        assert(base);
+        //assert(base); - asserty vadi mingw debugeru - viz.https://forum.qt.io/topic/7108/solved-qtcreator-2-2-1-crashes-when-debugging/12
 
         if((state == Active) && (m_id >= 0) && from){
 
-            while(from->base->readSpace(m_id));
+            while(from->base->readSpace(m_id))
                 base->update(from->base->read(m_id));
 
             if(base->readSpace())
@@ -55,9 +55,9 @@ protected slots:
         }
     }
 
-    virtual void change(rt_node *from){
+    virtual void change(const rt_node *from){
 
-        assert(base);
+        //assert(base);
 
         Q_UNUSED(from);
         base->change();
@@ -68,13 +68,13 @@ public:
 
     void init(i_rt_base *_base){
 
-        assert(_base);
+        //assert(_base);
         base = _base;
     }
 
-    void connection(rt_node *to){
+    void connection(const rt_node *to){
 
-        assert(base);
+        //assert(to);
 
         if(!to) return;
 

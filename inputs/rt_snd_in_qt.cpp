@@ -20,8 +20,10 @@ void rt_snd_in_qt::start(){
             break;
         case QAudio::StoppedState:
             if(input_io) disconnect(input_io, 0, this, 0);
-            if((input_io = input_audio->start()))  //zapiname pull mode
-                connect(input_io, SIGNAL(readyRead()), SLOT(process()));
+            if((input_io = input_audio->start())){  //zapiname pull mode
+
+                //connect(input_io, SIGNAL(readyRead()), this, SLOT(process()));
+            }
             break;
         case QAudio::IdleState:
             break;  //nic - cekame na data
@@ -83,26 +85,35 @@ void rt_snd_in_qt::update(const rt_node *from){
             if(!input_io || !input_audio)
                 return;
 
-            /*! todo switch for 8b/16b/32b prec */
-            double scale = 2.0 / (1 << format.sampleSize());
-            double offs = -1.0;
+            //sampleType unsigned
+            double scale = 2.0 / (1 << format.sampleSize());  //<0, 2.0>
+            double offs = -1.0; //<-1.0, 1.0>
+
+            //sampleType signed
+            if(format.sampleType() == QAudioFormat::SignedInt){
+
+                scale /= 2.0; offs = 0.0;
+            }
 
             qint64 avaiable_l = input_audio->bytesReady();//input_io->bytesAvailable();
             short local_samples[avaiable_l], *v = local_samples;  //vycteni dostupneho
             qint64 readable_l = input_io->read((char *)local_samples, avaiable_l);
 
-            double rv = offs + scale * *v++;
-            while(readable_l--) base->update(&rv);
+            while(readable_l--){
+
+                double rv = offs + scale * *v++;
+                base->update(&rv);
+            }
 
             if(base->readSpace())
                 emit on_update(this);
         }
-//        else
-//        {
-//            //if there is another source - multiplexing data
-//            //but the purpouse is spurious
-//            base->update(from);
-//        }
+        else
+        {
+            //if there is another source - multiplexing data
+            //but the purpouse is spurious
+            base->update(from);
+        }
     }
 }
 
@@ -122,7 +133,7 @@ void rt_snd_in_qt::change(int sampling_rate, int refresh_rate){
 
     if (!input_dev.isFormatSupported(format)) {
 
-        qWarning()  <<"default format not supported try to use nearest";
+        qWarning() << "default format not supported try to use nearest";
         format = input_dev.nearestFormat(format);
     }
 
@@ -133,8 +144,7 @@ void rt_snd_in_qt::change(int sampling_rate, int refresh_rate){
     }
 
     input_audio->setNotifyInterval(refresh_rate);  //navic mame to od byteready
-    connect(input_audio, SIGNAL(notify()), SLOT(process()));
-    connect(input_audio, SIGNAL(stateChanged(QAudio::State)),
-            SLOT(statechanged(QAudio::State)));
+    connect(input_audio, SIGNAL(notify()), this, SLOT(update()));
+    //connect(input_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
 }
 

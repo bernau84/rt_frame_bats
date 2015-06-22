@@ -22,7 +22,7 @@ private:
     t_rt_slice<T> cpb;                     /*! active spectrum */
     rt_idf_circ_simo<t_rt_slice<T> > *buf;  /*! spectrum buffer */
 
-    t_DiadicFilterBank<T> *bank;   /*! decimation fir filters branch */
+    t_DiadicFilterBank<T, RT_CPB_MAX_OCTAVES> *bank;   /*! decimation fir filters branch */
     t_DelayLine<T> *dline[RT_CPB_MAX_OCTAVES]; /*! group delay compensation set of fir filters */
 
     t_pFilter<T> *aline[RT_CPB_MAX_BANDS]; /*! analytic iir filters branch - band pass */
@@ -52,7 +52,7 @@ template<typename T> t_rt_cpb_te<T>::t_rt_cpb_te(const QDir resource):
     t_DirectFilter<double> deci(decif, gd, 2);
     t_DirectFilter<double> pass(passf, 1);
 
-    bank = new t_DiadicFilterBank<double>(pass, deci, RT_CPB_MAX_OCTAVES);  //naddimenzujem pro nejvyssi pocet oktav
+    bank = new t_DiadicFilterBank<double, RT_CPB_MAX_OCTAVES>(pass, deci);  //naddimenzujem pro nejvyssi pocet oktav
 
     for(int i=0; i<RT_CPB_MAX_OCTAVES; i++) dline[i] = 0; //vynulujem
     for(int i=0; i<RT_CPB_MAX_BANDS; i++) aver[i] = aline[i] = 0;
@@ -90,26 +90,26 @@ template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
     for(unsigned i=0; i<smp->A.size(); i++){
 
         T lp_st[RT_CPB_MAX_OCTAVES]; //
-        int n = bank->Process(smp->A[i], lp_st);  //deci bank, update [0] a [n-th] octave band
+        int n = bank->process(smp->A[i], lp_st);  //deci bank, update [0] a [n-th] octave band
 
         if(n >= octn) //omits octaves exceed given freq. range (computation powere is the same do decimation)
             continue;
 
-        T d_st_0 = dline[0]->Process(lp_st[0], 0);  //delay line for gd compenzation
-        T d_st_n = dline[n]->Process(lp_st[n], 0);
+        T d_st_0 = dline[0]->process(lp_st[0]);  //delay line for gd compenzation
+        T d_st_n = dline[n]->process(lp_st[n]);
 
         for(int j=0; j<octm; j++){
 
-            T a_st_0 = aline[j]->Process(d_st_0, 0); //cpb analytic iir
-            T a_st_n = aline[n*octm + j]->Process(d_st_n, 0);
+            T a_st_0 = aline[j]->process(d_st_0); //cpb analytic iir
+            T a_st_n = aline[n*octm + j]->process(d_st_n);
 
             //double f_0 = *sta.fs_in * (pow(2, -j/octm-n) - pow(2, -(j+1)/octm-n));
             //double f_n = *sta.fs_in * (pow(2, -j/octm) - pow(2, -(j+1)/octm));
 
             //upgrade & average curent spectrum
-            cpb.A[j] = aver[j]->Process(a_st_0, 0);
+            cpb.A[j] = d_st_0;  //aver[j]->Process(a_st_0, 0);
             cpb.I[j] = j; //f_0
-            cpb.A[n*octm + j] = aver[n*octm + j]->Process(a_st_n, 0);
+            cpb.A[n*octm + j] = d_st_n; //aver[n*octm + j]->Process(a_st_n, 0);
             cpb.I[n*octm + j] = octm*n+j; //f_n
         }
 
@@ -133,11 +133,13 @@ template <typename T> void t_rt_cpb_te<T>::change(){
     octm = par["Bands"].get().toDouble();  //pocet pasem na oktavu
     refr = par["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
 
+    int sl = par["Multibuffer"].get().toInt();
+
     //v1 - resize internal buffer
-//    if(buf) buf->resize(par["Slices"].get().toDouble());
+//    if(buf) buf->resize(sl);
     //v2 - rellocate
-//    delete(buf);
-//    buf = (rt_idf_circ_simo<t_rt_slice<T>> *) new rt_idf_circ_simo<t_rt_slice<T>>(par["Slices"].get());
+    if(buf) delete(buf);
+    buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(sl);
 
     cpb = t_rt_slice<T>(cpb.t, octm*octn); //keeps old time
 
@@ -167,11 +169,11 @@ template <typename T> void t_rt_cpb_te<T>::change(){
         double num[256], den[256];
         char pcpb[64], pnum[16], pden[16];
 
-        snprintf(pcpb, sizeof(pcpb), "__%d_cpb_biquadiir", i);
+        snprintf(pcpb, sizeof(pcpb), "__%d_cpb_biquadiir", octm);
         for(int j=0; j<octm; j++){
 
-            snprintf(pnum, sizeof(pnum), "num%d", j);
-            snprintf(pden, sizeof(pden), "den%d", j);
+            snprintf(pnum, sizeof(pnum), "num%d", j+1);
+            snprintf(pden, sizeof(pden), "den%d", j+1);
             rn = par[pcpb].db(pnum, num, sizeof(num)/sizeof(num[0]));
             rn = par[pcpb].db(pden, den, sizeof(den)/sizeof(den[0]));
             aline[i*octm + j] = (t_pFilter<T> *) new t_BiQuadFilter<double>(num, den, rn/3);

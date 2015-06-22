@@ -11,7 +11,9 @@
 #include "rt_snd_in_te.h"
 
 /*! \brief final assembly of rt_node and template of cpb - floating point version*/
-class rt_snd_in_qt : virtual public rt_node {
+class rt_snd_in_qt : public rt_node {
+
+    Q_OBJECT
 
 protected:
     QIODevice *input_io;
@@ -30,6 +32,11 @@ public slots:
 protected slots:
     /*! \brief rt_node update is override because special handling is
      * need cause there is no rt_node source of data in normal case*/
+    void update(void){
+
+        update(NULL);
+    }
+
     virtual void update(const rt_node *from);
     virtual void change(int sampling_rate, int refresh_rate); //[Hz], [ms]
 
@@ -50,7 +57,9 @@ public:
 
 /*! \brief final assembly of rt_node and template of soundcard input
  * floating point version*/
-class rt_snd_in_fp : virtual public rt_snd_in_qt {
+class rt_snd_in_fp : public rt_snd_in_qt {
+
+    Q_OBJECT
 
 private:
     t_rt_snd_in_te<double> worker;
@@ -67,7 +76,7 @@ protected slots:
     /*! \brief override default behavior
      * because snd_in change has to be called too and
      * updated setup has to be delivered somehow */
-    void change(rt_node *from){
+    void change(const rt_node *from){
 
         Q_UNUSED(from);
         worker.change();  //can modify fs, refresh rate respectively
@@ -85,6 +94,7 @@ public:
         worker(__helper_fs_list(in))
     {
         init(&worker);
+        change(this);
     }
 
     virtual ~rt_snd_in_fp(){

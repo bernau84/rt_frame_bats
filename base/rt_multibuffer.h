@@ -15,9 +15,6 @@
 
 template <typename T, int N> class t_multibuffer {
 
-    private:
-        t_rt_lock &lock;
-
     protected:
         int     size;
         int     wmark;
@@ -68,17 +65,10 @@ template <typename T, int N> class t_multibuffer {
             return (overflow[n % N] > 0) ? 1 : 0;
         }
 
-        /*!< size is number of item*/
-        t_multibuffer(int _size)
-            :size(_size){
-
-            __init();
-        }
-
         /*!< size is number of item, define mutex lock if concuret writing
          * or concuret reading from one index can occure */
-        t_multibuffer(int _size, t_rt_lock _lock)
-            :size(_size), lock(_lock){
+        t_multibuffer(int _size)
+            :size(_size){
 
             __init();
         }
@@ -100,7 +90,7 @@ template <typename T, int N>  const T *t_multibuffer<T, N>::get(int n){
         return NULL;
 #endif //NO_AVAIL_CHECK
 
-    return buf[rmark[nn]];      //ok
+    return &buf[rmark[nn]];      //ok
 }
 
 //------------------------------------------------------------------------------
@@ -111,9 +101,7 @@ template <typename T, int N> int t_multibuffer<T, N>::set(const T *smp){
         return 0;
 #endif //NO_AVAIL_CHECK
 
-    lock.lockWrite();
     buf[wmark] = *smp;
-    lock.unlock();
     return 1;
 }
 
@@ -123,19 +111,15 @@ template <typename T, int N> int t_multibuffer<T, N>::shift(int len, int n){
 
     int nn = n % N;
 
-    lock.lockRead();
     if((rmark[nn] + len) >= size) rmark[nn] -= size;
         else rmark[nn] += len;
     overflow[nn] = -1;
-    lock.unlock();
 
     return overflow[nn];
 }
 
 //------------------------------------------------------------------------------
 template <typename T, int N> int t_multibuffer<T, N>::write(const T *smp){
-
-    lock.lockWrite();
 
     if(smp) buf[wmark] = *smp;
     //check than modify - prevent mark to point out form buffer
@@ -147,8 +131,6 @@ template <typename T, int N> int t_multibuffer<T, N>::write(const T *smp){
         if((overflow[nn] > 0) || (wmark == rmark[nn]))  //musime testovat znovu po updatu
             overflow[nn] = (overflow[nn]+1) % size; //vetsi preteceni nez size neindikujem, po prvnim srovnani je overflow 0 == FULL
 
-    lock.unlock();
-
     return 0;
 }
 
@@ -158,7 +140,6 @@ template <typename T, int N> const T *t_multibuffer<T, N>::read(int n){
     int nn = n % N;
     const T *smp = NULL;
 
-    lock.lockRead();
     if((wmark != rmark[nn]) || (overflow[nn] >= 0)){
 
         smp = &buf[rmark[nn]];
@@ -167,7 +148,6 @@ template <typename T, int N> const T *t_multibuffer<T, N>::read(int n){
 
         overflow[nn] = -1; //OK
     }
-    lock.unlock();
 
     return smp;
 }
@@ -175,22 +155,15 @@ template <typename T, int N> const T *t_multibuffer<T, N>::read(int n){
 //------------------------------------------------------------------------------
 template <typename T, int N> int t_multibuffer<T, N>::readSpace(int n){
 
-    //lock.lockWrite();
-
     int nn = n % N;
     int tmp = (int)(wmark - rmark[nn]);
     if( ((tmp == 0)&&(overflow[nn] >= 0)) || (tmp < 0) ) tmp += size;   //volny prostor je prelozeny, nebo doslo k preteceni
-
-    //lock.unlock();
-
     return(tmp);   //prostor nebyl prelozeny (rd muze != wr i pri overflow)
 }
 
 //------------------------------------------------------------------------------
 //vycitani volneho mista z kruh bufferu ktery vyuziva cely prostor
 template <typename T, int N> int t_multibuffer<T, N>::writeSpace(int n){
-
-    //lock.lockWrite();
 
     int nn = n % N;
     int tmp = (int)(rmark[nn] - wmark);
@@ -200,7 +173,6 @@ template <typename T, int N> int t_multibuffer<T, N>::writeSpace(int n){
     } else
       tmp = 0;
 
-    //lock.unlock();
     return tmp; //mam tu preteceni - nelze zapsat nic; az dokud si app overflow neshodi
 }
 

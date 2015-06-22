@@ -1,5 +1,4 @@
-#include <QApplication>
-#include "mainwindow.h"
+#include <QCoreApplication>
 #include <QObject>
 #include <QDebug>
 #include <QAudioInput>
@@ -10,8 +9,7 @@
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    MainWindow w;
+    QCoreApplication a(argc, argv);
 
     QList<QAudioDeviceInfo> infos = QAudioDeviceInfo::availableDevices(QAudio::AudioInput);
     for(int i=0; i<infos.count(); i++)
@@ -27,6 +25,5 @@ int main(int argc, char *argv[])
         aidev->start(); //cele to odstartujem
     }
 
-    w.show();
     return a.exec();
 }

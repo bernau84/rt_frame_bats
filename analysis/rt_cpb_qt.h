@@ -22,17 +22,3 @@ public:
 };
 
 #endif //RT_CPB_QT_H
-
-
-//#include "analysis\rt_shift.h"
-// /*! \brief final assembly of rt_node and template of shift */
-//class rt_shift_fp : virtual public rt_node,
-//            virtual public t_rt_shift_te<double>{
-//public:
-//    rt_shift_fp(QObject *parent, const QDir &resource = QDir(":/config/js_config_freqshift.txt")):
-//        rt_node(parent),
-//        t_rt_shift_te<double>(parent, resource)
-//    {
-//    }
-//    virtual ~rt_shift_fp(){;}
-//};
