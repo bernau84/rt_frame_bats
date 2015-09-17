@@ -114,7 +114,7 @@ private:
 
 public:
     /*! \brief allow follower to register as independant reader
-     * if they wan to work in buffered mode using i_rt_dataflow_output
+     * if they want to work in blocking / buffered mode using i_rt_dataflow_output
      * interface
      * \return 1..RT_MAX_READERS-1, 0 is reserved for internal use */
     int subscribe(i_rt_base *reader){

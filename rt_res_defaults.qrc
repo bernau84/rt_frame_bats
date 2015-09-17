@@ -4,5 +4,6 @@
         <file>js_config_freqshift.txt</file>
         <file>js_config_sndsink.txt</file>
         <file>js_config_sndsource.txt</file>
+        <file>js_config_filteranalysis.txt</file>
     </qresource>
 </RCC>

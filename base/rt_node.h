@@ -20,9 +20,7 @@ class rt_node : public QObject
     Q_OBJECT
 
 protected:
-    //friend class rt_node; /*! nodes can share base access to provide data interface */
-    //not need because rt_node is implicitly friend with itself, hmm...
-
+    //not need tobe declared friend because rt_node is implicitly friend with itself, hmm...
     i_rt_base *base; /*! child not have to initilize base with real work base class */
 
 public:
@@ -36,14 +34,14 @@ public:
     i_rt_base *m_src;
 
 signals:
-    void on_update(const rt_node *);   //zmena zvnejsi - signal vede na slot change
+    void on_update(const rt_node *);   //zmena z vnejsi - signal vede na slot change
     void on_change(const rt_node *);  //propagace zmeny zevnitr k navazanym prvkum
 
 protected slots:
 
     virtual void update(const rt_node *from){
 
-        //assert(base); - asserty vadi mingw debugeru - viz.https://forum.qt.io/topic/7108/solved-qtcreator-2-2-1-crashes-when-debugging/12
+        //assert(base); - asserty asi vadi mingw debugeru - viz.https://forum.qt.io/topic/7108/solved-qtcreator-2-2-1-crashes-when-debugging/12
 
         if((state == Active) && (m_id >= 0) && from){
 
@@ -75,7 +73,6 @@ public:
     void connection(const rt_node *to){
 
         //assert(to);
-
         if(!to) return;
 
         m_src = to->base;

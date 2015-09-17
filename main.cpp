@@ -5,6 +5,7 @@
 #include <QAudioDeviceInfo>
 
 #include "analysis\rt_cpb_qt.h"
+#include "analysis\rt_filter_qt.h"
 #include "inputs\rt_snd_in_qt.h"
 
 int main(int argc, char *argv[])
@@ -18,10 +19,14 @@ int main(int argc, char *argv[])
     if(infos.count()){
 
         rt_snd_in_fp *aidev = new rt_snd_in_fp(); //berem prvni dobrou
-        rt_cpb_fp *aibat = new rt_cpb_fp(); //navazame na vzorkovac
-        aibat->connection(aidev);
+        //rt_cpb_fp *aibat = new rt_cpb_fp(); //navazame na vzorkovac
+        rt_filter_fp *aifilt = new rt_filter_fp(); //navazame na vzorkovac
 
-        aibat->start();
+        //aibat->connection(aidev);
+        aifilt->connection(aidev);
+
+        //aibat->start();
+        aifilt->start();
         aidev->start(); //cele to odstartujem
     }
 

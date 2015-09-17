@@ -22,16 +22,16 @@ template <class T> class t_pFilter {
 
         enum e_filter_struct {
 
-            IIR_DIRECT1,
-            IIR_DIRECT2, 
-            IIR_LATTICE,
-            IIR_BIQUADR,
+            IIR_DIRECT1 = 1,
+            IIR_DIRECT2 = 2,
+            IIR_LATTICE = 3,
+            IIR_BIQUADR = 4,
 
-            FIR_DIRECT1,
-            FIR_DELAYLN,
-            FIR_LATTICE,
+            FIR_DIRECT1 = 5,
+            FIR_DELAYLN = 6,
+            FIR_LATTICE = 7,
 
-            FFT_FILTER
+            FFT_FILTER = 8
         };
 
     protected:
@@ -49,7 +49,10 @@ template <class T> class t_pFilter {
 
     public:
 
-        /*! \brief - defines behaviour of filter */
+        /*! \brief - defines behaviour of filter,
+            n_2_proc == 0 defines valid output in decimation mode
+            \todo - may be used to signal valid output after group delay, after filter run-up time/sample
+        */
         virtual T process(const T new_smpl, int32_t *n_to_proc = &_n_to_proc) = 0;
 
         /*! \brief - backward identification */
@@ -86,11 +89,11 @@ template <class T> class t_pFilter {
 
         /*! \brief - copy of existing, except delay line */
         t_pFilter(const t_pFilter<T> &src_coeff_cpy):
+            shift_dat(src_coeff_cpy.shift_dat),
             coeff_num(src_coeff_cpy.coeff_num),
             coeff_den(src_coeff_cpy.coeff_den),
-            shift_dat(src_coeff_cpy.shift_dat),
-            struction(src_coeff_cpy.struction),
-            decimationf(src_coeff_cpy.decimationf)
+            decimationf(src_coeff_cpy.decimationf),
+            struction(src_coeff_cpy.struction)
         {
             proc  = 0;
         }
@@ -265,7 +268,7 @@ template <class T> class t_DirectFilter : public t_pFilter<T>{
                     this->prev += this->coeff_num[this->N-i]*v_i;  //reverse order of coefs assumed or symetry...hm
                 }
 
-                FREQ_RT_FILT_TRACE(1, "fir-proc-tick on %d, res %f", this->proc++, this->prev);
+                FREQ_RT_FILT_TRACE(1, "fir-proc-tick on %llu, res %f", this->proc, this->prev);
             }
 
             this->shift_dat[this->proc % (this->N - 1)] = new_smpl;
@@ -343,7 +346,7 @@ template <class T, int32_t DIADTREE_MAX_STAGES> class t_DiadicFilterBank {
         t_pFilter<T> *HP_filter[DIADTREE_MAX_STAGES];
         t_pFilter<T> *LP_filter[DIADTREE_MAX_STAGES];
 
-        int32_t    in;  //sample index
+        uint64_t    in;  //sample index
     public:
         /*! \brief - computes highest freq and one of lower stage
          * \param - sum_rslr is external buffer where output of all stages can be stored (M size is assumed)
@@ -360,13 +363,13 @@ template <class T, int32_t DIADTREE_MAX_STAGES> class t_DiadicFilterBank {
             //plus we need a shift each stage process to hamrmonize analysis speed
             int32_t m = 1;
             for(; m<DIADTREE_MAX_STAGES; m++)
-                if(0 == ((2^(m-1)+1 + in) % (2^m))){  //offset + step % period
+                if(0 == (((2^(m-1))+1 + in) % (2^m))){  //offset + step % period
 
                     //pocitame dalsi z nizsich stupnu
                     sum_rslt[m] = HP_filter[m]->process(LP_filter[m-1]->getLast());
                     LP_filter[m]->process(LP_filter[m-1]->getLast());
 
-                    FREQ_RT_FILT_TRACE(2, "%d-bank-proc on %d", m, in);  
+                    FREQ_RT_FILT_TRACE(2, "%d-bank-proc on %llu", m, in);
                     break;              
                 }
 
@@ -528,7 +531,7 @@ template <class T, int32_t DIADTREE_MAX_STAGES> class t_DiadicFilterBankH {
 
     private:
         t_DirectFilter<T> LP_filter[DIADTREE_MAX_STAGES];
-        int32_t    in;  //sample index
+        uint64_t    in;  //sample index
 
         unsigned M;
         unsigned N;
@@ -539,7 +542,7 @@ template <class T, int32_t DIADTREE_MAX_STAGES> class t_DiadicFilterBankH {
          */
         int32_t process(const T new_smpl, T (*sum_rslt)[DIADTREE_MAX_STAGES]){
 
-            //nejvyssi oktava
+            //highest octave
             sum_rslt[0] = LP_filter[0].process(new_smpl);
 
             //count next stage index 
@@ -549,9 +552,9 @@ template <class T, int32_t DIADTREE_MAX_STAGES> class t_DiadicFilterBankH {
             for(; m<M; m++)
                 if(0 == ((2^(m-1)+1 + in) % (2^m))){  //offset + step % period
 
-                    //pocitame dalsi z nizsich stupnu
+                    //another lower stage
                     sum_rslt[m] = LP_filter[m].process(LP_filter[m-1]->GetLast());
-                    FREQ_RT_FILT_TRACE(2, "%d-bank-proc on %d", m, in);  
+                    FREQ_RT_FILT_TRACE(2, "%d-bank-proc on %llu", m, in);
                     break;              
                 }
 
@@ -647,7 +650,7 @@ template <class T, int32_t PACKETTREE_MAX_STAGES> class t_PacketTreeH{
          */
         unsigned run(const T inp, unsigned n = 0){
 
-            FREQ_RT_FILT_TRACE(2, "node %d on sample %d", n, in);
+            FREQ_RT_FILT_TRACE(2, "node %d on sample %llu", n, in);
 
             unsigned l_tick, h_tick;
             node[n].LP_filter.process(inp, &l_tick);
@@ -690,7 +693,7 @@ template <class T, int32_t PACKETTREE_MAX_STAGES> class t_PacketTreeH{
             sum_rslt[node[i].code + 0] = node[i].LP_filter.getLast(); //not sure which - update both
             sum_rslt[node[i].code + 1] = node[i].HP_filter.getLast();
 
-            FREQ_RT_FILT_TRACE(5, "band %d(+1) updated on sample %d", node[i].code, in);
+            FREQ_RT_FILT_TRACE(5, "band %d(+1) updated on sample %llu", node[i].code, in);
             in += 1;
 
             return in;

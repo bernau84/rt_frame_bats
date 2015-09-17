@@ -103,6 +103,9 @@ template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
             T a_st_0 = aline[j]->process(d_st_0); //cpb analytic iir
             T a_st_n = aline[n*octm + j]->process(d_st_n);
 
+            Q_UNUSED(a_st_0);
+            Q_UNUSED(a_st_n);
+
             //double f_0 = *sta.fs_in * (pow(2, -j/octm-n) - pow(2, -(j+1)/octm-n));
             //double f_n = *sta.fs_in * (pow(2, -j/octm) - pow(2, -(j+1)/octm));
 
