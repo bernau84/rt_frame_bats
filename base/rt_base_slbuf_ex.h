@@ -34,6 +34,12 @@ public:
        buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(n);
     }
 
+    void buf_append(t_rt_slice<T> &smp){
+
+       if(buf) buf->write(&smp);
+       i_rt_base::signal(RT_SIG_SOURCE_UPDATED, &smp);
+    }
+
     virtual void update(t_rt_slice<T> &sample) = 0;
 
     /*! \brief common action for  */

@@ -15,7 +15,12 @@ private:
     int D;  //decimation factor
     int M;  //slice size
 
+    using i_rt_base_slbuf_ex<T>::par;
+    using i_rt_base_slbuf_ex<T>::buf_resize;
+    using i_rt_base_slbuf_ex<T>::buf_append;
+
 public:
+
     virtual void update(t_rt_slice<T> &smp);  /*! \brief data to analyse/process */
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
@@ -59,7 +64,7 @@ template <typename T> void t_rt_filter_te<T>::update(t_rt_slice<T> &smp){
             row.append(res, smp.I[i]/D); //D can reduce freq. resolution because of change fs
             if(row.isfull()){  //in auto mode (M == 0) with last sample of input slice
 
-                i_rt_base_slbuf_ex<T>::buf->write(&row); //write
+                buf_append(row); //write + send notifications
                 row.A.clear(); //force new row initializacion
            }
         }
@@ -72,12 +77,12 @@ template <typename T> void t_rt_filter_te<T>::update(t_rt_slice<T> &smp){
  */
 template <typename T> void t_rt_filter_te<T>::change(){
 
-    QJsonValue fi = i_rt_base::par["Filter"].get();
+    QJsonValue fi = par["Filter"].get();
 
-    D = i_rt_base::par["Decimation"].get().toInt();
-    M = i_rt_base::par["Slice"].get().toInt();
+    D = par["Decimation"].get().toInt();
+    M = par["Slice"].get().toInt();
 
-    i_rt_base_slbuf_ex<T>::buf_resize(i_rt_base::par["Multibuffer"].get().toInt());
+    buf_resize(par["Multibuffer"].get().toInt());
 
     /*! \todo - memni se mi trab jen rozmer multibuferu a kvuli tomu budu
      * mazat filtry?! pokud nechci budu si muset predchozi volbu nekde pamatovat ->
