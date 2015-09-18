@@ -30,34 +30,35 @@ public:
         Suspended = 0x80  //flag
     } state;
 
-    int        m_id; //zaloha reader_i z base connection() ktery je jinak private
-    i_rt_base *m_src;
-
 signals:
-    void on_update(const rt_node *);   //zmena z vnejsi - signal vede na slot change
-    void on_change(const rt_node *);  //propagace zmeny zevnitr k navazanym prvkum
+    void on_update(const void *sample);   //zmena z vnejsi - signal vede na slot change
+    void on_change();  //propagace zmeny zevnitr k navazanym prvkum
 
 protected slots:
 
-    virtual void update(const rt_node *from){
+    virtual void update(const void *sample){
 
         //assert(base); - asserty asi vadi mingw debugeru - viz.https://forum.qt.io/topic/7108/solved-qtcreator-2-2-1-crashes-when-debugging/12
 
-        if((state == Active) && (m_id >= 0) && from){
+        if(state == Active){
 
-            while(from->base->readSpace(m_id))
-                base->update(from->base->read(m_id));
+            base->on_update(sample); //process
 
-            if(base->readSpace())
-                emit on_update(this);
+            //test if signals for sucessor occured
+            for(std::pair<e_rt_signals, const void *> sig = base->pop_signal();
+                sig.first != RT_SIG_EMTY;
+                sig = base->pop_signal()){
+
+                //base->notify_all(sig.first, sig.second); //direct call
+                emit on_update(this); //qt signal/slot
+            }
         }
     }
 
-    virtual void change(const rt_node *from){
+    virtual void change(){
 
         //assert(base);
 
-        Q_UNUSED(from);
         base->change();
         emit on_update(this);
     }
@@ -75,12 +76,11 @@ public:
         //assert(to);
         if(!to) return;
 
-        m_src = to->base;
-        m_id = base->connection(m_src); //init reader index
+        base->connection(to->base); //init reader index
 
         //bound together
-        connect(to, SIGNAL(on_update(const rt_node*)), this, SLOT(update(const rt_node*)));
-        connect(to, SIGNAL(on_change(const rt_node*)), this, SLOT(change(const rt_node*)));
+        connect(to, SIGNAL(on_update(const void *)), this, SLOT(update(const void *)));
+        connect(to, SIGNAL(on_change()), this, SLOT(change()));
     }
 
     virtual void start(){

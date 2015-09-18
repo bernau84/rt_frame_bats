@@ -1,7 +1,7 @@
 #ifndef RT_CPB_QT_H
 #define RT_CPB_QT_H
 
-#include "base\rt_base.h"
+#include "base\rt_base_slbuf_ex.h"
 #include "base\rt_node.h"
 #include "freq_analysis.h"
 #include "freq_filtering.h"
@@ -10,7 +10,7 @@
 #define RT_CPB_MAX_BANDSINOCTAVE    24
 #define RT_CPB_MAX_BANDS (RT_CPB_MAX_OCTAVES*RT_CPB_MAX_BANDSINOCTAVE)
 
-template <typename T> class t_rt_cpb_te : public virtual i_rt_base
+template <typename T> class t_rt_cpb_te : public virtual i_rt_base_slbuf_ex<T>
 {
 private:
     int gd;    /*! groupdelay - number od deci fir taps */
@@ -19,7 +19,6 @@ private:
     double refr; /*! refresh rate */
 
     t_rt_slice<T> cpb;                     /*! active spectrum */
-    rt_idf_circ_simo<t_rt_slice<T> > *buf;  /*! spectrum buffer */
 
     t_DiadicFilterBank<T, RT_CPB_MAX_OCTAVES> *bank;   /*! decimation fir filters branch */
     t_DelayLine<T> *dline[RT_CPB_MAX_OCTAVES]; /*! group delay compensation set of fir filters */
@@ -28,22 +27,17 @@ private:
     t_pFilter<T> *aver[RT_CPB_MAX_BANDS];  /*! output averaging iir */
 
 public:
-    virtual const void *read(int n){ return (buf) ? buf->read(n) : NULL; }
-    virtual const void *get(int n){ return (buf) ? buf->get(n) : NULL;  }
-    virtual int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
-
-    virtual void update(const void *sample);  /*! \brief data to analyse/process */
+    virtual void update(t_rt_slice<T> &smp);  /*! \brief data to analyse/process */
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
     t_rt_cpb_te(const QDir resource = QDir(":/config/js_config_cpbanalysis.txt"));
-    virtual ~t_rt_cpb_te ();
+    virtual ~t_rt_cpb_te();
 };
 
 /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
 template<typename T> t_rt_cpb_te<T>::t_rt_cpb_te(const QDir resource):
-    i_rt_base(resource),
-    cpb(0, 0),
-    buf(NULL)
+    i_rt_base_slbuf_ex<T>(resource),
+    cpb(0, 0)
 {
     double decif[1024], passf[1] = {1.0};
 
@@ -73,23 +67,16 @@ template<typename T> t_rt_cpb_te<T>::~t_rt_cpb_te(){
         if(aline[i]) delete aline[i];
         if(aver[i]) delete aver[i];
     }
-
-    if(buf) delete buf;
 }
 
 /*! \brief implement cpb algortihm, assumes real time feeding
  * \param assumes the same type as internal buf is! */
-template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
+template <typename T> void t_rt_cpb_te<T>::update(t_rt_slice<T> &smp){
 
-    //convert & test sample; we uses pointer instead of references because reference can be tested
-    //only with slow try catch block which would be cover all processing loop
-    const t_rt_slice<T> *smp = (t_rt_slice<T> *)(sample);
-    if(smp == NULL) return;
-
-    for(unsigned i=0; i<smp->A.size(); i++){
+    for(unsigned i=0; i<smp.A.size(); i++){
 
         T lp_st[RT_CPB_MAX_OCTAVES]; //
-        int n = bank->process(smp->A[i], lp_st);  //deci bank, update [0] a [n-th] octave band
+        int n = bank->process(smp.A[i], lp_st);  //deci bank, update [0] a [n-th] octave band
 
         if(n >= octn) //omits octaves exceed given freq. range (computation powere is the same do decimation)
             continue;
@@ -115,7 +102,7 @@ template <typename T> void t_rt_cpb_te<T>::update(const void *sample){
             cpb.I[n*octm + j] = octm*n+j; //f_n
         }
 
-        double t = smp->t + i/(2*smp->I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
+        double t = smp.t + i/(2*smp.I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
         //average time reached - update buffer
         if((t - cpb.t) >= refr){ //spektrum je starsi nez refresh rate
 
@@ -135,13 +122,13 @@ template <typename T> void t_rt_cpb_te<T>::change(){
     octm = par["Bands"].get().toDouble();  //pocet pasem na oktavu
     refr = par["Time"].get().toDouble();  //vystupni frekvence spektralnich rezu (prevracena hodnota casoveho rozliseni)
 
-    int sl = par["Multibuffer"].get().toInt();
+    int n = par["Multibuffer"].get().toInt();
 
     //v1 - resize internal buffer
 //    if(buf) buf->resize(sl);
     //v2 - rellocate
     if(buf) delete(buf);
-    buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(sl);
+    buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(n);
 
     cpb = t_rt_slice<T>(cpb.t, octm*octn); //keeps old time
 

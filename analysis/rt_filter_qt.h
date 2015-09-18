@@ -1,43 +1,38 @@
 #ifndef RT_FILTER_QT
 #define RT_FILTER_QT
 
-#include "base\rt_base.h"
+#include "base\rt_base_slbuf_ex.h"
 #include "base\rt_node.h"
 #include "freq_analysis.h"
 #include "freq_filtering.h"
 
-template <typename T> class t_rt_filter_te : public virtual i_rt_base
+template <typename T> class t_rt_filter_te : public virtual i_rt_base_slbuf_ex<T>
 {
 private:
     t_rt_slice<T> row;  /*! active line */
     t_pFilter<T> *sys;  /*! general digital filter */
-    rt_idf_circ_simo<t_rt_slice<T> > *buf;  /*! output buffer */
 
     int D;  //decimation factor
     int M;  //slice size
-public:
-    virtual const void *read(int n){ return (buf) ? buf->read(n) : NULL; }
-    virtual const void *get(int n){ return (buf) ? buf->get(n) : NULL;  }
-    virtual int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
 
-    virtual void update(const void *sample);  /*! \brief data to analyse/process */
+public:
+    virtual void update(t_rt_slice<T> &smp);  /*! \brief data to analyse/process */
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
     t_rt_filter_te(const QDir resource = QDir(":/config/js_config_filteranalysis.txt"));
 
-    ~t_rt_filter_te(){
+    virtual ~t_rt_filter_te(){
 
-       if(buf) delete buf;
        if(sys) delete sys;
+       sys = NULL;
     }
 };
 
 /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
 template<typename T> t_rt_filter_te<T>::t_rt_filter_te(const QDir resource):
-    i_rt_base(resource),
+    i_rt_base_slbuf_ex<T>(resource),
     row(0, 0),
-    sys(NULL),
-    buf(NULL)
+    sys(NULL)
 {
    //finish initialization of filters and buffer
    change();
@@ -45,31 +40,26 @@ template<typename T> t_rt_filter_te<T>::t_rt_filter_te(const QDir resource):
 
 /*! \brief implement cpb algortihm, assumes real time feeding
  * \param assumes the same type as internal buf is! */
-template <typename T> void t_rt_filter_te<T>::update(const void *sample){
+template <typename T> void t_rt_filter_te<T>::update(t_rt_slice<T> &smp){
 
-    //convert & test sample; we uses pointer instead of references because reference can be tested
-    //only with slow try catch block which would be cover all processing loop
-    const t_rt_slice<T> *smp = (t_rt_slice<T> *)(sample);
-    if(smp == NULL) return;
-
-    for(unsigned i=0; i<smp->A.size(); i++){
+    for(unsigned i=0; i<smp.A.size(); i++){
 
         if(row.A.size() == 0){ //
 
-            double t = smp->t + i/(2*smp->I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
+            double t = smp.t + i/(2*smp.I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
 
             row = (M) ? t_rt_slice<T>(t, M, (T)0) :   //version with fixed known slice size
-                        t_rt_slice<T>(t, smp->A.size() / D, (T)0);  //auto-slice size (derived from input with respect to decimation)
+                        t_rt_slice<T>(t, smp.A.size() / D, (T)0);  //auto-slice size (derived from input with respect to decimation)
         }
 
         int32_t n_2_output;
-        T res = sys->process(smp->A[i], &n_2_output);
+        T res = sys->process(smp.A[i], &n_2_output);
         if(0 == n_2_output){
 
-            row.append(res, smp->I[i]/D); //D can reduce freq. resolution because of change fs
+            row.append(res, smp.I[i]/D); //D can reduce freq. resolution because of change fs
             if(row.isfull()){  //in auto mode (M == 0) with last sample of input slice
 
-                buf->write(&row); //write
+                i_rt_base_slbuf_ex<T>::buf->write(&row); //write
                 row.A.clear(); //force new row initializacion
            }
         }
@@ -82,14 +72,16 @@ template <typename T> void t_rt_filter_te<T>::update(const void *sample){
  */
 template <typename T> void t_rt_filter_te<T>::change(){
 
-    int n = par["Multibuffer"].get().toInt();
-    QJsonValue fi = par["Filter"].get();
+    int n = i_rt_base::par["Multibuffer"].get().toInt();
+    QJsonValue fi = i_rt_base::par["Filter"].get();
 
-    D = par["Decimation"].get().toInt();
-    M = par["Slice"].get().toInt();
+    D = i_rt_base::par["Decimation"].get().toInt();
+    M = i_rt_base::par["Slice"].get().toInt();
 
-    if(buf) delete(buf);
-    buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(n);
+    if(i_rt_base_slbuf_ex<T>::buf)
+        delete(i_rt_base_slbuf_ex<T>::buf);
+
+    i_rt_base_slbuf_ex<T>::buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(n);
 
     /*! \todo - memni se mi trab jen rozmer multibuferu a kvuli tomu budu
      * mazat filtry?! pokud nechci budu si muset predchozi volbu nekde pamatovat ->

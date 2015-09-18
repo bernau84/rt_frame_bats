@@ -76,9 +76,9 @@ protected slots:
     /*! \brief override default behavior
      * because snd_in change has to be called too and
      * updated setup has to be delivered somehow */
-    void change(const rt_node *from){
+    void change(const void *sample){
 
-        Q_UNUSED(from);
+        Q_UNUSED(sample);
         worker.change();  //can modify fs, refresh rate respectively
 
         int fs = worker.setup("Rates").toDouble();

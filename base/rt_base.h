@@ -16,13 +16,8 @@ public:
     virtual void update(const void *sample) = 0;  /*! \brief data to analyse/process */
     virtual void change() = 0;  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
-    i_rt_worker_io(){
-
-    }
-
-    virtual ~i_rt_worker_io(){
-
-    }
+    i_rt_worker_io(){;}
+    virtual ~i_rt_worker_io(){;}
 };
 
 /*! \brief - worker warapper and interface boundary between object
@@ -37,10 +32,11 @@ public:
 enum e_rt_regime {
 
     RT_BLOCKING = 0,  //direct call from one update() to another
-    RT_QUEUED  //signal is always queueq, signalization is maitained outside
+    RT_QUEUED,  //signal is always queueq, signalization is maitained outside
+    RT_TERMINAL  //no signal is spread from this node
 };
 
-enum e_rt_signals{
+enum e_rt_signals {
 
     RT_SIG_EMTY,
     RT_SIG_SOURCE_UPDATED,
@@ -65,7 +61,8 @@ protected:
     //lock for exclusive run of update
     rt_nos_lock m_lock;
 
-    t_collection par;  //setup io & storage
+    //setup io & storage
+    t_collection par;
 
 private:
     //constructor helpers
@@ -86,31 +83,41 @@ private:
 
 public:
 
-    /*! \brief notification to follower
-     */
-    void signal(e_rt_signals sig, const void *data){
-
-        if(m_mode == RT_QUEUED)
-             pending_sig.push_back(std::pair(sig, data));
-                return;
+    /*! \brief - direct call of listeners handlers */
+    void notify_all(e_rt_signals sig, const void *data){
 
         for(unsigned i=0; i<subscribers.size(); i++)
             if(sig == RT_SIG_SOURCE_UPDATED) subscribers[i]->on_update(data);
                 else if(sig == RT_SIG_SOURCE_UPDATED) subscribers[i]->on_change();
     }
 
+    /*! \brief notification signal handlihg - direct or queued
+     */
+    void signal(e_rt_signals sig, const void *data){
+
+        if(m_mode == RT_QUEUED){
+
+            std::pair<e_rt_signals, const void *> prop(sig, data);
+            pending_sig.push_back(prop);
+                return;
+        }
+
+        if(m_mode == RT_BLOCKING)
+            notify_all(sig, data);
+    }
+
     /*! \brief read pending signal and process them externaly
      */
-    std::pair<e_rt_signals, const void *> pop_signal(){
+    std::pair<e_rt_signals, const void *> pop_signal(void){
 
-        std::pair<e_rt_signals, const void *> out(RT_SIG_EMTY, NULL);
+        std::pair<e_rt_signals, const void *> prop(RT_SIG_EMTY, NULL);
         if(pending_sig.size()){
 
-            out = pending_sig.from();
+            prop = pending_sig.front();
             pending_sig.pop_front();
         }
 
-        return out;
+        return prop;
     }
 
     /*! \brief allow follower to register as independant reader
@@ -147,7 +154,7 @@ public:
     /*! \brief safe calling of change according to setup parameters
      * reset proccessing also
      */
-    void on_change(){
+    void on_change(void){
 
         m_lock.lockWrite();
         change(); //process change of config
@@ -179,6 +186,14 @@ public:
     {
         reader_i = -1;
         m_mode = mode;
+        source = NULL;
+    }
+
+    i_rt_base():
+        par(__set_from_file(""))
+    {
+        reader_i = -1;
+        m_mode = RT_BLOCKING;
         source = NULL;
     }
 

@@ -1,15 +1,15 @@
 #ifndef RT_DETECTOR_QT
 #define RT_DETECTOR_QT
 
+#include "base\rt_base_slbuf_ex.h"
 #include "rt_filter_qt.h"
 #include "rt_pwr_qt.h"
 
-template <typename T> class t_rt_detector_te : public virtual i_rt_base
+template <typename T> class t_rt_detector_te : public virtual i_rt_base_slbuf_ex<T>
 {
 private:
-    i_rt_base<T> &m_sys;  //unconnected system pro process input, result will trigger original input data
+    i_rt_base_slbuf_ex<T> &m_sys;  //unconnected system pro process input, result will trigger original input data
 
-    rt_idf_circ_simo<t_rt_slice<T> > *buf;  /*! output buffer */
     t_rt_slice<T> row;  /*! active line */
 
     int M;  //time slice lenght
@@ -23,22 +23,17 @@ private:
     double m_timestamp;    //of last change of state
 
 public:
-    virtual const void *read(int n){ return (buf) ? buf->read(n) : NULL; }
-    virtual const void *get(int n){ return (buf) ? buf->get(n) : NULL;  }
-    virtual int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
-
-    virtual void update(const void *sample);  /*! \brief data to analyse/process */
+    virtual void update(t_rt_slice<T> &smp);  /*! \brief data to analyse/process */
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
     t_rt_detector_te(i_rt_base<T> *sys, const QDir resource = QDir(":/config/js_config_detector.txt"));
 
-    ~t_rt_detector_te(){
-    }
+    virtual ~t_rt_detector_te(){;}
 };
 
 /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
 template<typename T> t_rt_detector_te<T>::t_rt_detector_te(i_rt_base<T> &sys, const QDir resource):
-    i_rt_base(resource),
+    i_rt_base_slbuf_ex<T>(resource),
     m_sys(sys)
 {
    m_time_holdon = m_time_holdoff = m_threshold_on = m_threshold_off = 0;
@@ -51,29 +46,26 @@ template<typename T> t_rt_detector_te<T>::t_rt_detector_te(i_rt_base<T> &sys, co
 
 /*! \brief implement cpb algortihm, assumes real time feeding
  * \param assumes the same type as internal buf is! */
-template <typename T> void t_rt_detector_te<T>::update(const void *sample){
+template <typename T> void t_rt_detector_te<T>::update(t_rt_slice<T> &smp){
 
-    m_sys.update(sample);
+    m_sys.update(smp);
     if(0 == m_sys.readSpace())
         return;
 
     const t_rt_slice<T> *pwr = (t_rt_slice<T> *)(m_sys.read());
     if(pwr == NULL) return;
 
-    const t_rt_slice<T> *smp = (t_rt_slice<T> *)(sample);
-    if(smp == NULL) return;
-
-    if(smp->A.size() != pwr->A.size())
+    if(smp.A.size() != pwr->A.size())
         return;     //necessery condition
 
     for(unsigned i=0; i<pwr->A.size(); i++){
 
-        double t = smp->t + i/(2*smp->I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
+        double t = smp.t + i/(2*smp.I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
 
         if(row.A.size() == 0){ //
 
             row = (M) ? t_rt_slice<T>(t, M, (T)0) :   //version with fixed known slice size
-                        t_rt_slice<T>(t, smp->A.size(), (T)0);  //auto-slice size (derived from input with respect to decimation)
+                        t_rt_slice<T>(t, smp.A.size(), (T)0);  //auto-slice size (derived from input with respect to decimation)
         }
 
         if((m_state) && ((t - m_timestamp) > m_time_holdon))  //m_time_holdon quarding time
@@ -120,8 +112,6 @@ template <typename T> void t_rt_detector_te<T>::change(){
 
     m_state = false;
 }
-
-
 
 
 /*! \brief final assembly of rt_node and template - floating point version*/

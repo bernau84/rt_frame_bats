@@ -38,7 +38,8 @@ HEADERS  +=\
     base/rt_tracing.h \
     analysis/rt_filter_qt.h \
     analysis/rt_pwr_qt.h \
-    analysis/rt_detector_qt.h
+    analysis/rt_detector_qt.h \
+    base/rt_base_slbuf_ex.h
 
 FORMS    +=
 
