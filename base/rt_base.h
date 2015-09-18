@@ -37,8 +37,14 @@ public:
 enum e_rt_regime {
 
     RT_BLOCKING = 0,  //direct call from one update() to another
-    RT_QUEUED,  //if process running signal is queued and fired later
-    RT_SIG_QUEUED,  //signal is always queueq, signalization is maitained outside
+    RT_QUEUED  //signal is always queueq, signalization is maitained outside
+};
+
+enum e_rt_signals{
+
+    RT_SIG_EMTY,
+    RT_SIG_SOURCE_UPDATED,
+    RT_SIG_CONFIG_CHANGED
 };
 
 class i_rt_base : virtual public i_rt_worker_io
@@ -46,13 +52,15 @@ class i_rt_base : virtual public i_rt_worker_io
 protected:
     e_rt_regime m_mode;
 
-    //props for acces trough interface
+    //list of sucessor
     std::vector<i_rt_base *> subscribers;
-    int reader_i;
+
+    //precesor prop
+    int reader_i;  //data acces reader index for this
+    i_rt_base *source;  //interface for data
 
     //queue mode props
-    std::list<const void *> pending_smp;
-    i_rt_dataflow_output *pending_src;
+    std::list<std::pair<e_rt_signals, const void *> > pending_sig;
 
     //lock for exclusive run of update
     rt_nos_lock m_lock;
@@ -76,39 +84,35 @@ private:
         return QJsonObject();
     }
 
+public:
+
     /*! \brief notification to follower
      */
-    void __signal(){
+    void signal(e_rt_signals sig, const void *data){
+
+        if(m_mode == RT_QUEUED)
+             pending_sig.push_back(std::pair(sig, data));
+                return;
 
         for(unsigned i=0; i<subscribers.size(); i++)
-            subscribers[i]->sig_update((i_rt_dataflow_output *)this);  //only 1x
+            if(sig == RT_SIG_SOURCE_UPDATED) subscribers[i]->on_update(data);
+                else if(sig == RT_SIG_SOURCE_UPDATED) subscribers[i]->on_change();
     }
 
-    /*! \brief sample process
+    /*! \brief read pending signal and process them externaly
      */
-    void __update(const void *sample){
+    std::pair<e_rt_signals, const void *> pop_signal(){
 
-        m_lock.lockWrite();
-        update(sample); //process sample
-        m_lock.unlock();
+        std::pair<e_rt_signals, const void *> out(RT_SIG_EMTY, NULL);
+        if(pending_sig.size()){
+
+            out = pending_sig.from();
+            pending_sig.pop_front();
+        }
+
+        return out;
     }
 
-
-    /*! \brief safe calling of change according to setup parameters
-     * reset proccessing also
-     */
-    void __change(){
-
-        //wait for empty queue - samples may become invalid ater updade
-        //for resizing internal buffer
-        while(pending_samples());
-
-        m_lock.lockWrite();
-        change(); //process sample
-        m_lock.unlock();
-    }
-
-public:
     /*! \brief allow follower to register as independant reader
      * if they want to work in blocking / buffered mode using i_rt_dataflow_output
      * interface
@@ -125,63 +129,29 @@ public:
     /*! \brief calling subscibe of remote source */
     int connection(i_rt_base *to){
 
+        source = to;
         return ((reader_i = to->subscribe(this)));
-    }
-
-    /*! \brief query of remaining samples to procceed
-     * for ballancing load and for waiting for idle state (== 0)
-     */
-    int pending_samples(){
-
-        if(pending_src && (reader_i >= 0))  //reader is valid only in cached mode
-            return pending_src->readSpace(reader_i);
-
-        return pending_smp.size();
-    }
-
-    /*! \brief received notification of new data to process;
-     * in dependance of mode data are immediately procesed or
-     * information is saved for next time;
-     *
-     * for data caching is responsible source
-     */
-    void sig_update(i_rt_dataflow_output *src){ //store or process instantly
-
-        pending_src = src;
-        if(m_mode == RT_QUEUED)
-            if(m_lock.locked())
-                return;
-
-        const void *sample;
-        if(reader_i >= 0)
-            while(NULL != (sample = pending_src->read(reader_i)))
-                __update(sample);
     }
 
     /*! \brief received notification of new data to process;
      * in dependance of mode sample is immediately procesed or
      * pointer is cached in internal queue
      */
-    void sig_update(const void *sample){ //process instantly (sample has not quarantine validity)
+    void on_update(const void *sample){ //process instantly (sample has not quarantine validity)
 
-        pending_smp.push_back(sample);
-        if(m_mode == RT_QUEUED)
-            if(m_lock.locked())
-                return;
-
-        while(pending_smp.size()){
-
-            __update(pending_smp.front());
-            pending_smp.pop_front();
-        }
+        m_lock.lockWrite();
+        update(sample); //process sample
+        m_lock.unlock();
     }
 
     /*! \brief safe calling of change according to setup parameters
      * reset proccessing also
      */
-    void sig_change(){
+    void on_change(){
 
-        __change();
+        m_lock.lockWrite();
+        change(); //process change of config
+        m_lock.unlock();
     }
 
 
@@ -198,7 +168,7 @@ public:
             val.set(v.toJsonValue());  //update actual value (with all restriction applied)
             par.replace(name, val); //writeback
 
-            __change();
+            on_change();
         }
 
         return val.get();
@@ -209,7 +179,7 @@ public:
     {
         reader_i = -1;
         m_mode = mode;
-        pending_src = NULL;
+        source = NULL;
     }
 
     virtual ~i_rt_base(){
