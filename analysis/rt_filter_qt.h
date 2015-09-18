@@ -72,16 +72,12 @@ template <typename T> void t_rt_filter_te<T>::update(t_rt_slice<T> &smp){
  */
 template <typename T> void t_rt_filter_te<T>::change(){
 
-    int n = i_rt_base::par["Multibuffer"].get().toInt();
     QJsonValue fi = i_rt_base::par["Filter"].get();
 
     D = i_rt_base::par["Decimation"].get().toInt();
     M = i_rt_base::par["Slice"].get().toInt();
 
-    if(i_rt_base_slbuf_ex<T>::buf)
-        delete(i_rt_base_slbuf_ex<T>::buf);
-
-    i_rt_base_slbuf_ex<T>::buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(n);
+    i_rt_base_slbuf_ex<T>::buf_resize(i_rt_base::par["Multibuffer"].get().toInt());
 
     /*! \todo - memni se mi trab jen rozmer multibuferu a kvuli tomu budu
      * mazat filtry?! pokud nechci budu si muset predchozi volbu nekde pamatovat ->

@@ -26,6 +26,14 @@ public:
        buf = NULL;
     }
 
+    void buf_resize(int n){
+
+       if(buf) delete(buf);
+       buf = NULL;
+
+       buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(n);
+    }
+
     virtual void update(t_rt_slice<T> &sample) = 0;
 
     /*! \brief common action for  */
