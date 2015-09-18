@@ -36,8 +36,9 @@ public:
 
 enum e_rt_regime {
 
-    RT_BLOCKING = 0,
-    RT_QUEUED
+    RT_BLOCKING = 0,  //direct call from one update() to another
+    RT_QUEUED,  //if process running signal is queued and fired later
+    RT_SIG_QUEUED,  //signal is always queueq, signalization is maitained outside
 };
 
 class i_rt_base : virtual public i_rt_worker_io
@@ -75,26 +76,21 @@ private:
         return QJsonObject();
     }
 
-    /*! \brief sample process & notification to follower
+    /*! \brief notification to follower
+     */
+    void __signal(){
+
+        for(unsigned i=0; i<subscribers.size(); i++)
+            subscribers[i]->sig_update((i_rt_dataflow_output *)this);  //only 1x
+    }
+
+    /*! \brief sample process
      */
     void __update(const void *sample){
 
         m_lock.lockWrite();
         update(sample); //process sample
         m_lock.unlock();
-
-        bool lfirst = true;
-        while(readSpace()){
-
-            const void *lsample = read();
-            for(unsigned i=0; i<subscribers.size(); i++){
-
-                subscribers[i]->sig_update(lsample); //report each sample
-                if(lfirst) subscribers[i]->sig_update((i_rt_dataflow_output *)this);  //only 1x
-            }
-
-            lfirst = false;
-        }
     }
 
 

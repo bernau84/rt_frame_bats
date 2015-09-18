@@ -32,15 +32,13 @@ HEADERS  +=\
     base/rt_node.h \
     base/rt_common.h \
     base/rt_datatypes.h \
-    analysis/rt_cpb_te.h \
     inputs/rt_snd_in_te.h \
     inputs/rt_snd_in_qt.h \
     analysis/rt_cpb_qt.h \
     base/rt_tracing.h \
-    analysis/rt_filter_te.h \
     analysis/rt_filter_qt.h \
     analysis/rt_pwr_qt.h \
-    analysis/rt_pwr_te.h
+    analysis/rt_detector_qt.h
 
 FORMS    +=
 
