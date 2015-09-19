@@ -22,13 +22,13 @@ protected:
      using t_multibuffer<T, N>::rmark;
 
     public:
-        virtual int write(const T *smp){  //add sample
+        virtual const T *write(const T *smp){  //add sample
 
             buf[wmark + size] = *smp;  //fill higher half
             return t_multibuffer<T, N>::write(smp);  //and lower + increment wr pointer
         }
 
-        virtual int set(const T *smp){ //rewrite actual possition & mirror
+        virtual const T *set(const T *smp){ //rewrite actual possition & mirror
 
             buf[wmark + size] = *smp;  //fill higher half
             return t_multibuffer<T, N>::set(smp);  //and lower

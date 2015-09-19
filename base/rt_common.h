@@ -84,7 +84,11 @@ public:
         return (locked_rd || locked_wr) ? true : false;
     }
 
-    rt_nos_lock(){ ;}
+    rt_nos_lock(){
+
+        unlock();
+    }
+
     virtual ~rt_nos_lock(){;}
 };
 

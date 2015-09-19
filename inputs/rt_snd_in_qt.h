@@ -30,15 +30,8 @@ public slots:
     void error(void);
 
 protected slots:
-    /*! \brief rt_node update is override because special handling is
-     * need cause there is no rt_node source of data in normal case*/
-    void update(void){
-
-        update(NULL);
-    }
-
-    virtual void update(const rt_node *from);
-    virtual void change(int sampling_rate, int refresh_rate); //[Hz], [ms]
+    void notify_proc(void);
+    void config_proc(int sampling_rate, int refresh_rate); //[Hz], [ms]
 
 public:
     rt_snd_in_qt(const QAudioDeviceInfo &in, QObject *parent = NULL):
@@ -76,15 +69,12 @@ protected slots:
     /*! \brief override default behavior
      * because snd_in change has to be called too and
      * updated setup has to be delivered somehow */
-    void change(const void *sample){
-
-        Q_UNUSED(sample);
-        worker.change();  //can modify fs, refresh rate respectively
+    void on_change(){
 
         int fs = worker.setup("Rates").toDouble();
         int rr = 1000 * worker.setup("__refresh_rate").toDouble();
-
-        rt_snd_in_qt::change(fs, rr);
+        config_proc(fs, rr);
+        rt_node::on_change();
     }
 
 public:
@@ -94,7 +84,7 @@ public:
         worker(__helper_fs_list(in))
     {
         init(&worker);
-        change(this);
+        on_change();
     }
 
     virtual ~rt_snd_in_fp(){

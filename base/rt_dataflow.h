@@ -19,8 +19,8 @@ class i_rt_dataflow_input
 {
 protected:
     //for internal working object usage
-    virtual int write(const void *smp) = 0;
-    virtual int set(const void *smp) = 0;
+    virtual const void *write(const void *smp) = 0;
+    virtual const void *set(const void *smp) = 0;
     virtual int writeSpace() = 0;
 };
 
@@ -58,8 +58,8 @@ protected:
 
 public:
     //for internal working object usage
-    virtual int write(const void *smp){ return t_multibuffer<T, RT_MAX_READERS>::write((T *)smp); }
-    virtual int set(const void *smp){ return t_multibuffer<T, RT_MAX_READERS>::set((T *)smp); }
+    virtual const void *write(const void *smp){ return t_multibuffer<T, RT_MAX_READERS>::write((T *)smp); }
+    virtual const void *set(const void *smp){ return t_multibuffer<T, RT_MAX_READERS>::set((T *)smp); }
     virtual int writeSpace(){ return t_multibuffer<T, RT_MAX_READERS>::writeSpace(); }
 
     //extern object can read too (but cannot change)

@@ -76,48 +76,38 @@ void rt_snd_in_qt::error(void){
     }
 }
 
-void rt_snd_in_qt::update(const rt_node *from){
+void rt_snd_in_qt::notify_proc(){
 
     if(state == Active){
 
-        if(from == NULL){
+        if(!input_io || !input_audio)
+            return;
 
-            if(!input_io || !input_audio)
-                return;
+        //sampleType unsigned
+        double scale = 2.0 / (1 << format.sampleSize());  //<0, 2.0>
+        double offs = -1.0; //<-1.0, 1.0>
 
-            //sampleType unsigned
-            double scale = 2.0 / (1 << format.sampleSize());  //<0, 2.0>
-            double offs = -1.0; //<-1.0, 1.0>
+        //sampleType signed
+        if(format.sampleType() == QAudioFormat::SignedInt){
 
-            //sampleType signed
-            if(format.sampleType() == QAudioFormat::SignedInt){
-
-                scale /= 2.0; offs = 0.0;
-            }
-
-            qint64 avaiable_l = input_audio->bytesReady();//input_io->bytesAvailable();
-            short local_samples[avaiable_l], *v = local_samples;  //vycteni dostupneho
-            qint64 readable_l = input_io->read((char *)local_samples, avaiable_l);
-
-            while(readable_l--){
-
-                double rv = offs + scale * *v++;
-                base->update(&rv);
-            }
-
-            if(base->readSpace())
-                emit on_update(this);
+            scale /= 2.0; offs = 0.0;
         }
-        else
-        {
-            //if there is another source - multiplexing data
-            //but the purpouse is spurious
-            base->update(from);
+
+        qint64 avaiable_l = input_audio->bytesReady();//input_io->bytesAvailable();
+        short local_samples[avaiable_l], *v = local_samples;  //vycteni dostupneho
+        qint64 readable_l = input_io->read((char *)local_samples, avaiable_l);
+
+        while(readable_l--){
+
+            double rv = offs + scale * *v++;
+            rt_node::on_update(&rv); //sample by sample - if row is full, signal is fired
+
+            /*may be - test RT_SIG_CONFIG_CHANGED signal and call on_change() directly */
         }
     }
 }
 
-void rt_snd_in_qt::change(int sampling_rate, int refresh_rate){
+void rt_snd_in_qt::config_proc(int sampling_rate, int refresh_rate){
 
     if(input_audio)
         delete input_audio;
@@ -144,7 +134,7 @@ void rt_snd_in_qt::change(int sampling_rate, int refresh_rate){
     }
 
     input_audio->setNotifyInterval(refresh_rate);  //navic mame to od byteready
-    connect(input_audio, SIGNAL(notify()), this, SLOT(update()));
+    connect(input_audio, SIGNAL(notify()), this, SLOT(notify_proc()));
     //connect(input_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
 }
 

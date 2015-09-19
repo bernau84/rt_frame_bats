@@ -3,6 +3,12 @@
 
 #include "rt_base.h"
 
+/*! \brief encapsulation of base and multibuffer classes
+ * simplified manipulation with buffer and save/general
+ * on_update(void *) implementation
+ *
+ * inherited class
+ */
 template <typename T> class i_rt_base_slbuf_ex : public virtual i_rt_base
 {
 protected:
@@ -36,8 +42,7 @@ public:
 
     void buf_append(t_rt_slice<T> &smp){
 
-       if(buf) buf->write(&smp);
-       i_rt_base::signal(RT_SIG_SOURCE_UPDATED, &smp);
+       if(buf) i_rt_base::signal(RT_SIG_SOURCE_UPDATED, buf->write(&smp));  //write & signal with global pointer into buffer
     }
 
     virtual void update(t_rt_slice<T> &sample) = 0;

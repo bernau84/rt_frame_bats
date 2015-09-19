@@ -10,9 +10,13 @@
 #include "rt_setup.h"
 #include "rt_dataflow.h"
 
+/*! \brief common interface - dataflow_outpu is an interface for access internal buffer
+ * update and chaneg are hidden implementation of action - acessible throught on_update and on_change in
+ * rt_base child class
+*/
 class i_rt_worker_io : public virtual i_rt_dataflow_output {
 
-public:
+protected:
     virtual void update(const void *sample) = 0;  /*! \brief data to analyse/process */
     virtual void change() = 0;  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
@@ -176,13 +180,22 @@ public:
             par.replace(name, val); //writeback
 
             on_change();
+
+            /* we may fire signal instantly or let change() to to that - prefered because
+             *      update works at the same way
+             *
+             * signal(RT_SIG_CONFIG_CHANGED, NULL);
+             * signal(RT_SIG_CONFIG_CHANGED, name) lespi ale todle nelze
+             *          jedine ze by to slo nejak pretypovat na pointer s trvalou platnosti, ukazatel do par
+             */
         }
 
         return val.get();
     }
 
     i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
-        par(__set_from_file(resource.absolutePath()))
+        par(__set_from_file(resource.absolutePath())),
+        m_lock()
     {
         reader_i = -1;
         m_mode = mode;

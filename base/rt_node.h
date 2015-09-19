@@ -31,12 +31,12 @@ public:
     } state;
 
 signals:
-    void on_update(const void *sample);   //zmena z vnejsi - signal vede na slot change
-    void on_change();  //propagace zmeny zevnitr k navazanym prvkum
+    void signal_update(const void *sample);   //zmena z vnejsi - signal vede na slot change
+    void signal_change();  //propagace zmeny zevnitr k navazanym prvkum
 
 protected slots:
 
-    virtual void update(const void *sample){
+    virtual void on_update(const void *sample){
 
         //assert(base); - asserty asi vadi mingw debugeru - viz.https://forum.qt.io/topic/7108/solved-qtcreator-2-2-1-crashes-when-debugging/12
 
@@ -44,23 +44,24 @@ protected slots:
 
             base->on_update(sample); //process
 
-            //test if signals for sucessor occured
+            //test if signals for sucessors occured
             for(std::pair<e_rt_signals, const void *> sig = base->pop_signal();
                 sig.first != RT_SIG_EMTY;
                 sig = base->pop_signal()){
 
                 //base->notify_all(sig.first, sig.second); //direct call
-                emit on_update(this); //qt signal/slot
+                if(sig.first == RT_SIG_SOURCE_UPDATED) emit signal_update(sig.second); //qt signal/slot - worker was updated
+                if(sig.first == RT_SIG_CONFIG_CHANGED) emit signal_change(); //qt signal/slot - worker config has changed; probably newer hapend
             }
         }
     }
 
-    virtual void change(){
+    virtual void on_change(){
 
         //assert(base);
 
-        base->change();
-        emit on_update(this);
+        base->on_change();
+        emit signal_update(this);
     }
 
 public:
@@ -71,6 +72,7 @@ public:
         base = _base;
     }
 
+    /*! \brief bypass callback mechanizm by signal/slot */
     void connection(const rt_node *to){
 
         //assert(to);
@@ -79,8 +81,8 @@ public:
         base->connection(to->base); //init reader index
 
         //bound together
-        connect(to, SIGNAL(on_update(const void *)), this, SLOT(update(const void *)));
-        connect(to, SIGNAL(on_change()), this, SLOT(change()));
+        connect(to, SIGNAL(signal_update(const void *)), this, SLOT(on_update(const void *)));
+        connect(to, SIGNAL(signal_change()), this, SLOT(on_change()));
     }
 
     virtual void start(){

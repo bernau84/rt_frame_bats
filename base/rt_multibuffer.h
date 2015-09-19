@@ -41,8 +41,8 @@ template <typename T, int N> class t_multibuffer {
 
 
     public:
-        virtual int write(const T *smp);  /*!< simple append (update write pointer), return 1 with success */
-        virtual int set(const T *smp);  /*!< re/write item on write pointer without it shift, return 1 if item avaiable */
+        virtual const T *write(const T *smp);  /*!< simple append (update write pointer), return 1 with success */
+        virtual const T *set(const T *smp);  /*!< re/write item on write pointer without it shift, return 1 if item avaiable */
 
         const T *read(int n = 0);  /*!< simple read (update read pointer), return non-null with success */
         const T *get(int n = 0);  /*!< reads item on read pointer without it shift */
@@ -94,15 +94,15 @@ template <typename T, int N>  const T *t_multibuffer<T, N>::get(int n){
 }
 
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::set(const T *smp){
+template <typename T, int N> const T *t_multibuffer<T, N>::set(const T *smp){
 
 #ifndef NO_AVAIL_CHECK
     if((smp == NULL) /* || (writeSpace(n) < 0)*/)
-        return 0;
+        return NULL;
 #endif //NO_AVAIL_CHECK
 
     buf[wmark] = *smp;
-    return 1;
+    return &buf[wmark];
 }
 
 
@@ -119,9 +119,11 @@ template <typename T, int N> int t_multibuffer<T, N>::shift(int len, int n){
 }
 
 //------------------------------------------------------------------------------
-template <typename T, int N> int t_multibuffer<T, N>::write(const T *smp){
+template <typename T, int N> const T *t_multibuffer<T, N>::write(const T *smp){
 
     if(smp) buf[wmark] = *smp;
+    const T *ret = &buf[wmark];
+
     //check than modify - prevent mark to point out form buffer
     //can be problem at multithread, we dont have to use lock (for simo system)
     if(wmark >= (size-1)) wmark = 0;
@@ -131,7 +133,7 @@ template <typename T, int N> int t_multibuffer<T, N>::write(const T *smp){
         if((overflow[nn] > 0) || (wmark == rmark[nn]))  //musime testovat znovu po updatu
             overflow[nn] = (overflow[nn]+1) % size; //vetsi preteceni nez size neindikujem, po prvnim srovnani je overflow 0 == FULL
 
-    return 0;
+    return ret;
 }
 
 //------------------------------------------------------------------------------
