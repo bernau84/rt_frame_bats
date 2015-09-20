@@ -24,7 +24,16 @@ public:
     virtual void update(t_rt_slice<T> &smp);  /*! \brief data to analyse/process */
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
-    t_rt_filter_te(const QDir resource = QDir(":/config/js_config_filteranalysis.txt"));
+    /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
+    t_rt_filter_te(const QDir resource = QDir(":/config/js_config_filteranalysis.txt")):
+        i_rt_base(resource, RT_QUEUED),  //!!because i_rt_base is virtual base class, constructor has to be defined here!!
+        i_rt_base_slbuf_ex<T>(resource),
+        row(0, 0),
+        sys(NULL)
+    {
+       //finish initialization of filters and buffer
+       change();
+    }
 
     virtual ~t_rt_filter_te(){
 
@@ -33,15 +42,6 @@ public:
     }
 };
 
-/*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
-template<typename T> t_rt_filter_te<T>::t_rt_filter_te(const QDir resource):
-    i_rt_base_slbuf_ex<T>(resource),
-    row(0, 0),
-    sys(NULL)
-{
-   //finish initialization of filters and buffer
-   change();
-}
 
 /*! \brief implement cpb algortihm, assumes real time feeding
  * \param assumes the same type as internal buf is! */

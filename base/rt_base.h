@@ -127,14 +127,14 @@ public:
     /*! \brief allow follower to register as independant reader
      * if they want to work in blocking / buffered mode using i_rt_dataflow_output
      * interface
-     * \return 1..RT_MAX_READERS-1, 0 is reserved for internal use */
+     * \return 0..RT_MAX_READERS-1*/
     int subscribe(i_rt_base *reader){
 
         if(subscribers.size() >= RT_MAX_READERS)
             return -1;
 
         subscribers.push_back(reader);
-        return subscribers.size();
+        return subscribers.size()-1;
     }
 
     /*! \brief calling subscibe of remote source */
@@ -167,6 +167,7 @@ public:
 
 
     /*! \brief setup collection io, read for empty/default v
+     * \todo - template instead of QVariant and std::string for QString
      */
     QVariant setup(const QString &name, QVariant v = QVariant()){
 
@@ -187,28 +188,33 @@ public:
              * signal(RT_SIG_CONFIG_CHANGED, NULL);
              * signal(RT_SIG_CONFIG_CHANGED, name) lespi ale todle nelze
              *          jedine ze by to slo nejak pretypovat na pointer s trvalou platnosti, ukazatel do par
+             *
+             * !!!strategii pro change signal vubec nemam; vim jen ze se ma sirit pokud na tom zavisi
+             * navazujici nody ale proto je to delane pres jfta buffer by se tomu predeslo
+             * zatim tedy neni sireni signalu pro update nutne
              */
         }
 
         return val.get();
     }
 
+    /*! \todo cancel dependacy to QDir - use std::string */
     i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
-        par(__set_from_file(resource.absolutePath())),
-        m_lock()
+        m_lock(),
+        par(__set_from_file(resource.absolutePath()))
     {
         reader_i = -1;
         m_mode = mode;
         source = NULL;
     }
 
-    i_rt_base():
-        par(__set_from_file(""))
-    {
-        reader_i = -1;
-        m_mode = RT_BLOCKING;
-        source = NULL;
-    }
+//    i_rt_base():
+//        par(__set_from_file(""))
+//    {
+//        reader_i = -1;
+//        m_mode = RT_BLOCKING;
+//        source = NULL;
+//    }
 
     virtual ~i_rt_base(){
         //empty

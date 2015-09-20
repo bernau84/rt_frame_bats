@@ -51,7 +51,7 @@ public:
     void update(const void *sample){
 
         //can we process all samples at once - and from oldes?
-        if((reader_i >= 0) && (source == NULL)){
+        if((reader_i >= 0) && (source != NULL)){
 
             while(source->readSpace(reader_i)){
 
