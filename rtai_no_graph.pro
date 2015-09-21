@@ -39,7 +39,8 @@ HEADERS  +=\
     analysis/rt_filter_qt.h \
     analysis/rt_pwr_qt.h \
     analysis/rt_detector_qt.h \
-    base/rt_base_slbuf_ex.h
+    base/rt_base_slbuf_ex.h \
+    analysis/rt_w_pwr_qt.h
 
 FORMS    +=
 
@@ -54,5 +55,6 @@ RESOURCES += \
     rt_res_defaults.qrc
 
 DISTFILES += \
-    js_config_filteranalysis.txt
+    js_config_filteranalysis.txt \
+    js_config_detector.txt
 

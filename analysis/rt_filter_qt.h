@@ -77,17 +77,17 @@ template <typename T> void t_rt_filter_te<T>::update(t_rt_slice<T> &smp){
  */
 template <typename T> void t_rt_filter_te<T>::change(){
 
-    QJsonValue fi = par["Filter"].get();
-
-    D = par["Decimation"].get().toInt();
-    M = par["Slice"].get().toInt();
-
-    buf_resize(par["Multibuffer"].get().toInt());
 
     /*! \todo - memni se mi trab jen rozmer multibuferu a kvuli tomu budu
      * mazat filtry?! pokud nechci budu si muset predchozi volbu nekde pamatovat ->
      * mit fi jako member promennou
      */
+
+    buf_resize(par["Multibuffer"].get().toInt());
+    QJsonValue fi = par["Filter"].get();
+    D = par["Decimation"].get().toInt();
+    M = par["Slice"].get().toInt();
+
     if(!fi.isArray())
         return;
 

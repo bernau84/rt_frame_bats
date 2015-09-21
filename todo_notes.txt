@@ -9,6 +9,7 @@ Napojeni plotu
 - aby to nerusilo; tady asi nebude vadit kdyz nebudu stihat
 
 Konfigurace
+! json ano ale ne Qt - zbavit se maximalne zavislosti na qt (prenositelnost do embedded)
 - defaultni konfig soucasti resourcu (zdrojaku) at to nestrasi v kodu
 - json vsude + rozlisujem extra hodnoty jako min, max, act, def a info
 ? jak sme na tom s podporiu multiselectu (polozka musi by QJsonArray a musime o tom vedet a v kodu s tim tak zachazet!)
@@ -23,10 +24,10 @@ Tracovani
 - kouknout jestli enexistuje nejaky hotovy system logovani (na pozadi, nesmi nic brzdit!)
 
 NOTES
+! json ano ale ne Qt - zbavit se maximalne zavislosti na qt (prenositelnost do embedded) - a to obecne
 ? jak resit konfiguraci zapojeni prvku? (ala a project file?)
 ? podpora skriptovani (pridani custom prvku....nebo pres konfiguraci)
 * preprocess vyhodime, vyuzijem usus ze na jakykoli prvek muzem napojit jakykoli dalsi - rozhranni je identicke
-?! inheritance operatoru? asi ano ale co to jako dela?
 ? vicevstupy nod
 ! uzivatelska nastaveni odehravat pres predka t_collection (nomalne import a export pres QJsonDocument!)
 ! obecny prvek jako multibuffer s double neni uplne pekny...multibuffer je sablona a leobecny predek uz by byt nemusel

@@ -5,5 +5,9 @@
         <file>js_config_sndsink.txt</file>
         <file>js_config_sndsource.txt</file>
         <file>js_config_filteranalysis.txt</file>
+        <file>js_config_detector.txt</file>
+        <file>js_config_pwr_meas.txt</file>
+        <file>js_config_w_pwr_filter.txt</file>
+        <file>js_config_w_pwr_power.txt</file>
     </qresource>
 </RCC>

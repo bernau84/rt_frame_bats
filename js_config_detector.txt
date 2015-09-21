@@ -1,0 +1,55 @@
+{
+    "Multibuffer": {
+        "__info": "size of Z buffer (history of time slices)",
+        "__def": 2,
+        "__min": 1
+    },
+    "Slice": {
+        "__info": "size of X buffer (length of time slices)",
+        "auto(0)": 0,
+        "small(10)": 10,
+        "wide(100)": 100,
+        "__def": 0,
+        "__min": 1
+    },
+    "ReferenceT": {
+        "__info": "min/aver/max dynamics in seconds",
+        "none": 0,
+        "fast(1/8s)": 0.125,        
+        "slow(1s)": 1.0,  
+        "long(10s)": 10.0,          
+        "__def": 10.0     
+    },   
+    "ReferenceV": {
+        "__info": "relative to min/max/aver OR absolute (in range <-1.0, 1.0> )",
+        "absolute": "ABS",
+        "minimum": "MIN",        
+        "average": "AVER",  
+        "maximum": "MAX",          
+        "__def": "ABS"     
+    },
+    "ThresholdOn": {
+        "__info": "value triggers on detection (in fraction <0, 1.0> for relative unit)",
+        "none(0)": 0,        
+        "__def": 0.75,
+        "__min": 0
+    },    
+    "ThresholdOff": {
+        "__info": "value triggers off detection (in fraction <0, 1.0> for relative unit)",
+        "none(0)": 0,        
+        "__def": 0.25,
+        "__min": 0
+    },     
+    "HoldOn": {
+        "__info": "ms guard time after start detection",
+        "none(0)": 0,
+        "__def": 100,
+        "__min": 0
+    },  
+    "HoldOff": {
+        "__info": "ms guard time after stop detection",
+        "none(0)": 0,
+        "__def": 100,
+        "__min": 0
+    }
+}

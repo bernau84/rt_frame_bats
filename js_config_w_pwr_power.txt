@@ -1,0 +1,31 @@
+{
+    "Multibuffer": {
+        "__info": "size of Z buffer (history of time slices)",
+        "__def": 2,
+        "__min": 1
+    },
+    "Slice": {
+        "__info": "size of X buffer (length of time slices)",
+        "auto(0)": 0,
+        "small(10)": 10,
+        "wide(100)": 100,
+        "__def": 0,
+        "__min": 1
+    },
+    "AveragingT": {
+        "__info": "pwr dynamics in seconds",
+        "none": 0,
+        "fast(1/8s)": 0.125,        
+        "slow(1s)": 1.0,  
+        "long(10s)": 10.0,          
+        "__def": 1.0    
+    },
+    "Norm": {
+        "__info": "methodics",
+        "mean abs": "ABS",
+        "mean power": "SQUARE",        
+        "ac abs": "AC_ABS",  
+        "ac power": "AC_SQUARE",          
+        "__def": "AC_SQUARE"   
+    }    
+}

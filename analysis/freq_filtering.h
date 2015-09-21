@@ -31,7 +31,8 @@ template <class T> class t_pFilter {
             FIR_DELAYLN = 6,
             FIR_LATTICE = 7,
 
-            FFT_FILTER = 8
+            FFT_FILTER = 8,
+            AVER_RECURSIVE = 9
         };
 
     protected:
@@ -72,19 +73,22 @@ template <class T> class t_pFilter {
         void reset(const T def = T(0)){
 
             shift_dat.assign(shift_dat.size(), def);
+            prev = T(0);
+            proc = 0;
         }
 
         /*! \brief - set initial value (to minimize gd for example)
          * preload sample inxed as well (to realize harmonic bank filter)
          */
-        void reset(std::vector<T> &def){
+        void reset(std::vector<T> &def, T iniv = T(0)){
 
             int i=0;
             for(; i<shift_dat.size(); i++)
                 if(i<def.size()) shift_dat[i] = def[i];
                     else shift_dat[i] = T(0.0);
 
-            prev = i;
+            prev = iniv;
+            proc = i;
         }        
 
         /*! \brief - copy of existing, except delay line */
@@ -117,6 +121,60 @@ template <class T> class t_pFilter {
         virtual ~t_pFilter(){
 
         }
+};
+
+/*! \class template of t_AveragingFilter
+ * \brief - recursive moving averaging filter starting as liner an after aquire RC x samples
+ * switch to IIR 1-pole filter with respoect to T_A ~ 2*T_RC
+ */
+template <class T> class t_AveragingFilter : public t_pFilter<T> {
+
+    public:
+        /*! \brief - simple delay buffer, ceficients doesn't play any role */
+        T process(const T new_smpl, int32_t *n_to_proc = &_n_to_proc){
+
+            T y = this->prev;
+            this->proc += 1;
+
+            if(this->proc < this->coeff_num[0])
+                y = y * (this->proc - 1)/this->proc + new_smpl / this->proc; //linear
+            else
+                y += (new_smpl - y) / (this->coeff_num[0] / 2); //exponential moving
+
+            //decimation - on every dec.period refresch prev cache value
+            if(0 == (*n_to_proc = (this->proc % this->decimationf)))
+                this->prev = y;
+
+            return this->prev;
+        }
+
+        /*! \brief - runtime modification of averating time constant */
+        void modify(T TA){
+
+           this->coeff_num[0] = TA;
+        }
+
+        /*! \brief - copy constructor */
+        t_AveragingFilter(const t_pFilter<T> &src_coeff_cpy)
+                      :t_pFilter<T>(src_coeff_cpy)
+        {
+            this->struction = t_pFilter<T>::AVER_RECURSIVE;
+        }
+
+        /*! \brief - new delay line; rc konstant as parameter - in number of samples
+         * averaging time TA ~ 2*RC
+        */
+        t_AveragingFilter(T TA, int32_t _decimationf = 1)
+                      :t_pFilter<T>(NULL, NULL, 1, _decimationf)
+        {
+            this->shift_dat[0] = (T)0;
+            this->coeff_num[0] = TA;
+            this->N = 1;
+
+            this->struction = t_pFilter<T>::AVER_RECURSIVE;
+        }
+
+        ~t_t_AveragingFilter(){;}
 };
 
 
