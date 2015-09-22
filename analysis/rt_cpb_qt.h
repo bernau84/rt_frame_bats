@@ -177,9 +177,9 @@ private:
     t_rt_cpb_te<double> worker;
 
 public:
-    rt_cpb_fp(QObject *parent = NULL):
+    rt_cpb_fp(QObject *parent = NULL, const QString &config = QString()):
         rt_node(parent),
-        worker()
+        worker(config.toStdString())
     {
         init(&worker); //connect real objecr with abstract pointer
     }

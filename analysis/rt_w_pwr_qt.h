@@ -22,17 +22,34 @@ public:
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
     /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
-    t_rt_w_pwr_te(const QDir filter_res = QDir(":/config/js_config_w_pwr_filter.txt"),
-                  const QDir power_res = QDir(":/config/js_config_w_pwr_power.txt")):
-        i_rt_base(QDir(), RT_QUEUED),
-        filter(filter_res),
-        power(power_res)
+    t_rt_w_pwr_te(const std::string &conf_filt, const std::string &conf_pwr):
+        i_rt_base("", RT_QUEUED),
+        filter(conf_filt, ":/config/js_config_w_pwr_filter.txt"),
+        power(conf_pwr, ":/config/js_config_w_pwr_power.txt")
     {
        //finish initialization of filters and buffer
        change();
     }
 
     virtual ~t_rt_w_pwr_te(){;}
+};
+
+/*! \class rt_pwr_fp
+ * \brief final assembly of rt_node and template - floating point version*/
+class rt_w_pwr_fp : virtual public rt_node {
+
+private:
+    t_rt_pwr_te<double> worker;
+
+public:
+    rt_pwr_fp(QObject *parent = NULL, const QString &conf_filter = QString(), , const QString &conf_pwr = QString()):
+        rt_node(parent),
+        worker(conf_filter.toStdString(), conf_pwr.toStdString())
+    {
+        init(&worker); //connect real objecr with abstract pointer
+    }
+
+    virtual ~rt_pwr_fp(){;}
 };
 
 #endif // RT_WEIGHTED_PWR_QT

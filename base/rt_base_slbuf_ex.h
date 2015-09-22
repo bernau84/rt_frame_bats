@@ -20,8 +20,8 @@ public:
     virtual const void *get(int n){ return (buf) ? buf->get(n) : NULL;  }
     virtual int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
 
-    i_rt_base_slbuf_ex(const QDir resource, e_rt_regime mode = RT_QUEUED):
-            i_rt_base(resource, mode),
+    i_rt_base_slbuf_ex(const std::string &conf, const std::string &def, e_rt_regime mode = RT_QUEUED):
+            i_rt_base(conf, def, mode),
             buf(NULL)
     {
     }

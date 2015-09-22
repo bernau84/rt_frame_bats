@@ -79,9 +79,10 @@ protected slots:
 
 public:
     rt_snd_in_fp(const QAudioDeviceInfo in = QAudioDeviceInfo::defaultInputDevice(),
-                 QObject *parent = NULL):
+                 QObject *parent = NULL,
+                const QString &config = QString()):
         rt_snd_in_qt(in, parent),
-        worker(__helper_fs_list(in))
+        worker(__helper_fs_list(in), config.toStdString())
     {
         init(&worker);
         on_change();

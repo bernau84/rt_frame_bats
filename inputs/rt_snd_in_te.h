@@ -64,8 +64,8 @@ public:
         signal(RT_SIG_SOURCE_UPDATED, "something"); //inform sucessor and may be the sampler as well
     }
 
-    t_rt_snd_in_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsource.txt")):
-        i_rt_base(resource, RT_QUEUED),
+    t_rt_snd_in_te(const t_setup_entry &freq, const std::string &conf):
+        i_rt_base(conf, ":/config/js_config_sndsource.txt", RT_QUEUED),
         buf(NULL)
     {
         par.replace("Rates", freq);  //update list

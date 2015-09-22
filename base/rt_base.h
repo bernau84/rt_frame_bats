@@ -2,8 +2,7 @@
 #define T_RT_BASE_H
 
 #include <QObject>
-#include <QTime>
-#include <QDir>
+#include <QFile>
 #include <QSignalMapper>
 
 #include "rt_common.h"
@@ -66,14 +65,23 @@ protected:
     rt_nos_lock m_lock;
 
     //setup io & storage
+    std::string config_def;  //default config json (from resources probably)
     t_collection par;
 
 private:
     //constructor helpers
-    QJsonObject __set_from_file(const QString path){
+    QJsonObject __set_from_file(const QString &path){
 
-        /*! default config */
-        QFile f_def(path);  //from resources
+        QFile f_cnf(path);  //from external file
+        if(f_cnf.open(QIODevice::ReadOnly | QIODevice::Text)){
+
+            QByteArray f_data = f_cnf.read(64000);
+            QJsonDocument js_doc = QJsonDocument::fromJson(f_data);
+            if(!js_doc.isEmpty())
+                return js_doc.object();
+        }
+
+        QFile f_def(config_def.c_str());  //from resources
         if(f_def.open(QIODevice::ReadOnly | QIODevice::Text)){
 
             QByteArray f_data = f_def.read(64000);
@@ -198,10 +206,10 @@ public:
         return val.get();
     }
 
-    /*! \todo cancel dependacy to QDir - use std::string */
-    i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
+    i_rt_base(const std::string &conf, const std::string &def, e_rt_regime mode = RT_BLOCKING):
         m_lock(),
-        par(__set_from_file(resource.absolutePath()))
+        config_def(def),
+        par(__set_from_file(conf.c_str()))
     {
         reader_i = -1;
         m_mode = mode;

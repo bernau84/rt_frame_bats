@@ -50,9 +50,9 @@ public:
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
     /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
-    t_rt_detector_te(i_rt_base_slbuf_ex<T> &sys, const QDir resource = QDir(":/config/js_config_detector.txt")):
-        i_rt_base(resource, RT_QUEUED),  //!!because i_rt_base is virtual base class, constructor has to be defined here!!
-        i_rt_base_slbuf_ex<T>(resource),
+    t_rt_detector_te(i_rt_base_slbuf_ex<T> &sys, const std::string &conf):
+        i_rt_base(conf, ":/config/js_config_detector.txt", RT_QUEUED),  //!!because i_rt_base is virtual base class, constructor has to be defined here!!
+        i_rt_base_slbuf_ex<T>(conf, ":/config/js_config_detector.txt"),
         m_preproc(sys),
         sta_min(1),
         sta_max(1),
@@ -179,9 +179,9 @@ private:
     t_rt_detector_te<double> worker;
 
 public:
-    rt_detector_fp(QObject *parent = NULL):
+    rt_detector_fp(QObject *parent = NULL, const QString &config = QString()):
         rt_node(parent),
-        worker()
+        worker(config.toStdString())
     {
         init(&worker); //connect real objecr with abstract pointer
     }
