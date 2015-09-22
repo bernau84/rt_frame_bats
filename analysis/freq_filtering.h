@@ -174,7 +174,7 @@ template <class T> class t_AveragingFilter : public t_pFilter<T> {
             this->struction = t_pFilter<T>::AVER_RECURSIVE;
         }
 
-        ~t_t_AveragingFilter(){;}
+        ~t_AveragingFilter(){;}
 };
 
 
