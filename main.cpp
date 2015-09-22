@@ -6,6 +6,7 @@
 
 //#include "analysis\rt_cpb_qt.h"
 #include "analysis\rt_filter_qt.h"
+#include "analysis\rt_w_pwr_qt.h"
 #include "inputs\rt_snd_in_qt.h"
 
 int main(int argc, char *argv[])
@@ -21,12 +22,15 @@ int main(int argc, char *argv[])
         rt_snd_in_fp *aidev = new rt_snd_in_fp(); //berem prvni dobrou
         //rt_cpb_fp *aibat = new rt_cpb_fp(); //navazame na vzorkovac
         rt_filter_fp *aifilt = new rt_filter_fp(); //navazame na vzorkovac
+        rt_w_pwr_fp *ai_w_pwr = new rt_w_pwr_fp(); //navazame na vzorkovac
 
         //aibat->connection(aidev);
         aifilt->connection(aidev);
+        ai_w_pwr->connection(aidev);
 
         //aibat->start();
         aifilt->start();
+        ai_w_pwr->start();
         aidev->start(); //cele to odstartujem
     }
 

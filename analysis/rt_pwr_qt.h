@@ -12,7 +12,7 @@ template <typename T> class t_rt_pwr_te : public virtual i_rt_base_slbuf_ex<T>
 {
 private:
     t_rt_slice<T> row;  // active line
-    t_AveragingFilter avr;  //recirsive linaer->exponential averaging filter
+    t_AveragingFilter<T> avr;  //recirsive linaer->exponential averaging filter
 
     int     M;   //time slice length
     int     TN;  //averaging time in samples
@@ -42,9 +42,9 @@ public:
         i_rt_base(resource, RT_QUEUED),  //!!because i_rt_base is virtual base class, constructor has to be defined here!!
         i_rt_base_slbuf_ex<T>(resource),
         row(0, 0),
+        avr(0),
         m_dc(0),
-        m_pwr(0),
-        avr(0)
+        m_pwr(0)
     {
        //finish initialization of filters and buffer
        change();
@@ -91,7 +91,7 @@ template <typename T> void t_rt_pwr_te<T>::update(t_rt_slice<T> &smp){
 
         if(row.isfull()){  //in auto mode (M == 0) with last sample of input slice
 
-            buf->write(&row); //write
+            buf_append(row); //write
             row.A.clear(); //force new row initializacion
        }
     }
@@ -104,7 +104,7 @@ template <typename T> void t_rt_pwr_te<T>::change(){
     M = par["Slice"].get().toInt();
     TA = par["AveragingT"].get().toDouble();
 
-    QString meth = par["Norm"].get().toString();
+    QString s_meth = par["Norm"].get().toString();
     if(s_meth.compare("ABS") == 0) m_method = RT_PWR_ABS;
     else if(s_meth.compare("SQUARE") == 0) m_method = RT_PWR_SQUARE;
     else if(s_meth.compare("AC_ABS") == 0) m_method = RT_PWR_AC_ABS;

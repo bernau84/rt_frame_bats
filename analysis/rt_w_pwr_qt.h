@@ -6,7 +6,9 @@
 #include "rt_filter_qt.h"
 #include "rt_pwr_qt.h"
 
-
+/*! \class t_rt_w_pwr_te - template of weighted power measurement
+ * \brief according to filter design cam realize spl computation or frequency band eveluation
+ */
 template <typename T> class t_rt_w_pwr_te : public virtual i_rt_base
 {
 private:
@@ -33,6 +35,48 @@ public:
     }
 
     virtual ~t_rt_w_pwr_te(){;}
+};
+
+/*! \brief cascade callibg filter and power calculation
+ *  uses direct call without callback or signal mechanism - both
+ * parts are unconnected */
+template <typename T> void t_rt_w_pwr_te<T>::update(const void *sample){
+
+    filter.on_update(sample);
+    while(filter.readSpace(0))
+        power.on_update(filter.read(0));
+
+    while(power.readSpace(0))
+        signal(RT_SIG_SOURCE_UPDATED, power.read(0));
+}
+
+/*! \brief refresh analysis setting and resising internal buffer
+ * \warning is not thread safety, caller must ensure that all pointers and interface of old
+ *          buffer are unused
+ */
+template <typename T> void t_rt_w_pwr_te<T>::change(){
+
+    filter.change();
+    power.change();
+}
+
+/*! \class rt_w_pwr_fp
+ * \brief final assembly of rt_node and template - floating point version
+ */
+class rt_w_pwr_fp : virtual public rt_node {
+
+private:
+    t_rt_w_pwr_te<double> worker;
+
+public:
+    rt_w_pwr_fp(QObject *parent = NULL):
+        rt_node(parent),
+        worker()
+    {
+        init(&worker); //connect real objecr with abstract pointer
+    }
+
+    virtual ~rt_w_pwr_fp(){;}
 };
 
 #endif // RT_WEIGHTED_PWR_QT

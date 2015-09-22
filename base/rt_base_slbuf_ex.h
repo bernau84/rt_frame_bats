@@ -48,7 +48,7 @@ public:
     virtual void update(t_rt_slice<T> &sample) = 0;
 
     /*! \brief common action for  */
-    void update(const void *sample){
+    virtual void update(const void *sample){
 
         //can we process all samples at once - and from oldes?
         if((reader_i >= 0) && (source != NULL)){

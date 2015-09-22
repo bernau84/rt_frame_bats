@@ -101,9 +101,12 @@ public:
 
         if(m_mode == RT_QUEUED){
 
-            std::pair<e_rt_signals, const void *> prop(sig, data);
-            pending_sig.push_back(prop);
-                return;
+            if(subscribers.size()){  //not for terminal nodes
+
+                std::pair<e_rt_signals, const void *> prop(sig, data);
+                pending_sig.push_back(prop);
+                    return;
+            }
         }
 
         if(m_mode == RT_BLOCKING)
@@ -198,6 +201,14 @@ public:
         return val.get();
     }
 
+    /*! \brief batch collection update from json string
+     */
+    void import(const QString &json_config){
+        Q_UNUSED(json_config);
+        /*! \todo
+         */
+    }
+
     /*! \todo cancel dependacy to QDir - use std::string */
     i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
         m_lock(),
@@ -207,14 +218,6 @@ public:
         m_mode = mode;
         source = NULL;
     }
-
-//    i_rt_base():
-//        par(__set_from_file(""))
-//    {
-//        reader_i = -1;
-//        m_mode = RT_BLOCKING;
-//        source = NULL;
-//    }
 
     virtual ~i_rt_base(){
         //empty

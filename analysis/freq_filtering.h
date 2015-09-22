@@ -82,7 +82,7 @@ template <class T> class t_pFilter {
          */
         void reset(std::vector<T> &def, T iniv = T(0)){
 
-            int i=0;
+            unsigned i=0;
             for(; i<shift_dat.size(); i++)
                 if(i<def.size()) shift_dat[i] = def[i];
                     else shift_dat[i] = T(0.0);
