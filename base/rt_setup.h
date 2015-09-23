@@ -188,6 +188,8 @@ public:
  * list of object is hidden as private, read must be done via ask,
  * write via udate
  * \warning adding entry is not allowed in user space
+ * \todo predelat na std::map - maximalne se potrebujem zbavit zavisloti na qt protoze jde o soucast base
+ * a tak to chcem multiplatformni
  */
 
 class t_collection : public QObject, private QJsonObject {

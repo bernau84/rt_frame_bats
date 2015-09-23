@@ -49,12 +49,16 @@ OTHER_FILES += \
     js_config_sndsink.txt \
     js_config_cpbanalysis.txt \
     js_config_freqshift.txt \
-    js_config_plotgraph.txt
+    js_config_plotgraph.txt \
+    js_config_filteranalysis.txt \
+    js_config_w_pwr_calc.txt \
+    js_config_w_pwr_filter.txt \
+    js_config_pwr_meas.txt \
+    js_config_detector.txt
 
 RESOURCES += \
     rt_res_defaults.qrc
 
-DISTFILES += \
-    js_config_filteranalysis.txt \
-    js_config_detector.txt
+
+
 

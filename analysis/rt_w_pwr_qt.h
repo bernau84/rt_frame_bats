@@ -25,7 +25,7 @@ public:
 
     /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
     t_rt_w_pwr_te(const QDir filter_res = QDir(":/config/js_config_w_pwr_filter.txt"),
-                  const QDir power_res = QDir(":/config/js_config_w_pwr_power.txt")):
+                  const QDir power_res = QDir(":/config/js_config_w_pwr_calc.txt")):
         i_rt_base(QDir(), RT_QUEUED),
         filter(filter_res),
         power(power_res)

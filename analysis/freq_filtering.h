@@ -167,7 +167,7 @@ template <class T> class t_AveragingFilter : public t_pFilter<T> {
         t_AveragingFilter(T TA, int32_t _decimationf = 1)
                       :t_pFilter<T>(NULL, NULL, 1, _decimationf)
         {
-            this->shift_dat[0] = (T)0;
+            this->coeff_num.resize(1);
             this->coeff_num[0] = TA;
             this->N = 1;
 

@@ -38,7 +38,7 @@ public:
     virtual void change();  /*! \brief someone changed setup or input signal property (sampling frequency for example) */
 
     /*! \brief constructor creates and initialize digital filters from predefined resource file configuration */
-    t_rt_pwr_te(const QDir resource = QDir(":/config/js_config_filteranalysis.txt")):
+    t_rt_pwr_te(const QDir resource = QDir(":/config/js_config_pwr_meas.txt")):
         i_rt_base(resource, RT_QUEUED),  //!!because i_rt_base is virtual base class, constructor has to be defined here!!
         i_rt_base_slbuf_ex<T>(resource),
         row(0, 0),
