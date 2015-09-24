@@ -6,7 +6,7 @@
 #include <vector>
 
 #define FREQ_RT_FILT_TRACE(NO, FORMAT, ...)\
-    fprintf (stderr, "%d>  "FORMAT"\n", NO, __VA_ARGS__);
+    fprintf (stdout, "%d>  "FORMAT"\n", NO, __VA_ARGS__);
 
 
 static int32_t _n_to_proc = 0;   //null dev in app doesn't need this value
@@ -326,7 +326,7 @@ template <class T> class t_DirectFilter : public t_pFilter<T>{
                     this->prev += this->coeff_num[this->N-i]*v_i;  //reverse order of coefs assumed or symetry...hm
                 }
 
-                FREQ_RT_FILT_TRACE(1, "fir-proc-tick on %llu, res %f", this->proc, this->prev);
+                //FREQ_RT_FILT_TRACE(1, "fir-proc-tick on %llu, res %f", this->proc, this->prev);
             }
 
             this->shift_dat[this->proc % (this->N - 1)] = new_smpl;

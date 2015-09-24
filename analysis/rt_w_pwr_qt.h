@@ -32,6 +32,7 @@ public:
     {
        //finish initialization of filters and buffer
        change();
+       trc.enable(TR_LEVEL_ALL, "w_pwr");
     }
 
     virtual ~t_rt_w_pwr_te(){;}
@@ -42,12 +43,16 @@ public:
  * parts are unconnected */
 template <typename T> void t_rt_w_pwr_te<T>::update(const void *sample){
 
+    trc.start_meas();
+
     filter.on_update(sample);
     while(filter.readSpace(0))
         power.on_update(filter.read(0));
 
     while(power.readSpace(0))
         signal(RT_SIG_SOURCE_UPDATED, power.read(0));
+
+    trc.end_meas();
 }
 
 /*! \brief refresh analysis setting and resising internal buffer

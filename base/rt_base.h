@@ -9,6 +9,7 @@
 #include "rt_common.h"
 #include "rt_setup.h"
 #include "rt_dataflow.h"
+#include "rt_tracing.h"
 
 /*! \brief common interface - dataflow_outpu is an interface for access internal buffer
  * update and chaneg are hidden implementation of action - acessible throught on_update and on_change in
@@ -67,6 +68,9 @@ protected:
 
     //setup io & storage
     t_collection par;
+
+    //tracing op
+    t_rt_tracer trc;
 
 private:
     //constructor helpers
@@ -212,7 +216,8 @@ public:
     /*! \todo cancel dependacy to QDir - use std::string */
     i_rt_base(const QDir &resource, e_rt_regime mode = RT_BLOCKING):
         m_lock(),
-        par(__set_from_file(resource.absolutePath()))
+        par(__set_from_file(resource.absolutePath())),
+        trc()
     {
         reader_i = -1;
         m_mode = mode;
