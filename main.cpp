@@ -8,6 +8,7 @@
 #include "analysis\rt_filter_qt.h"
 #include "analysis\rt_w_pwr_qt.h"
 #include "inputs\rt_snd_in_qt.h"
+#include "outputs\rt_snd_out_qt.h"
 
 int main(int argc, char *argv[])
 {
@@ -23,14 +24,17 @@ int main(int argc, char *argv[])
         //rt_cpb_fp *aibat = new rt_cpb_fp(); //navazame na vzorkovac
         rt_filter_fp *aifilt = new rt_filter_fp(); //navazame na vzorkovac
         rt_w_pwr_fp *ai_w_pwr = new rt_w_pwr_fp(); //navazame na vzorkovac
+        rt_snd_out_fp *aodev = new rt_snd_out_fp(); //audio output
 
         //aibat->connection(aidev);
         aifilt->connection(aidev);
         ai_w_pwr->connection(aidev);
+        aodev->connection(aifilt);
 
         //aibat->start();
         aifilt->start();
         ai_w_pwr->start();
+        aodev->start();
         aidev->start(); //cele to odstartujem
     }
 

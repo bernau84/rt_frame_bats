@@ -17,7 +17,8 @@ CONFIG   -= app_bundle
 
 SOURCES += main.cpp\
         analysis/freq_analysis.cpp\
-    inputs/rt_snd_in_qt.cpp
+    inputs/rt_snd_in_qt.cpp \
+    outputs/rt_snd_out_qt.cpp
 
 HEADERS  +=\
 	freq_analysis.h\
@@ -40,7 +41,9 @@ HEADERS  +=\
     analysis/rt_pwr_qt.h \
     analysis/rt_detector_qt.h \
     base/rt_base_slbuf_ex.h \
-    analysis/rt_w_pwr_qt.h
+    analysis/rt_w_pwr_qt.h \
+    outputs/rt_snd_out_qt.h \
+    outputs/rt_snd_out_te.h
 
 FORMS    +=
 

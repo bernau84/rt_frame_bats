@@ -1,26 +1,25 @@
-#ifndef RT_SND_IN_QT
-#define RT_SND_IN_QT
+#ifndef RT_OUTPUT_H
+#define RT_OUTPUT_H
 
 #include <QAudioFormat>
-#include <QAudioInput>
+#include <QAudioOutput>
 
 #include "../base/rt_dataflow.h"
 #include "../base/rt_node.h"
-#include "rt_snd_in_te.h"
+#include "rt_snd_out_te.h"
 
 /*! \brief final assembly of rt_node and template of cpb - floating point version*/
-class rt_snd_in_qt : public rt_node {
+class rt_snd_out_qt : public rt_node {
 
     Q_OBJECT
 
-protected:
-    QIODevice *input_io;
+private:
+    QIODevice *output_io;
     QAudioFormat format;
-    QAudioInput *input_audio;
-    QAudioDeviceInfo input_dev;
+    QAudioOutput *output_audio;
+    QAudioDeviceInfo output_dev;
 
 public slots:
-
     virtual void start();   //override rt_node start
     virtual void stop();    //override rt_node stop
 
@@ -32,33 +31,32 @@ protected slots:
     void config_proc(int sampling_rate, int refresh_rate); //[Hz], [ms]
 
 public:
-    rt_snd_in_qt(const QAudioDeviceInfo &in, QObject *parent = NULL):
+    rt_snd_out_qt(const QAudioDeviceInfo &out, QObject *parent = NULL):
         rt_node(parent),
-        input_dev(in)
+        output_dev(out)
     {
-        input_io = 0;
-        input_audio = 0;
+        output_io = 0;
+        output_audio = 0;
     }
 
-    virtual ~rt_snd_in_qt(){
+    virtual ~rt_snd_out_qt(){
         //empty
     }
 };
 
-
 /*! \brief final assembly of rt_node and template of soundcard input
  * floating point version*/
-class rt_snd_in_fp : public rt_snd_in_qt {
+class rt_snd_out_fp : public rt_snd_out_qt {
 
     Q_OBJECT
 
 private:
-    t_rt_snd_in_te<double> worker;
+    t_rt_snd_out_te<double> worker;
 
-    t_setup_entry __helper_fs_list(const QAudioDeviceInfo &in){
+    t_setup_entry __helper_fs_list(const QAudioDeviceInfo &out){
 
         QJsonArray jfrl;  //conversion
-        QList<int> qfrl = in.supportedSampleRates();
+        QList<int> qfrl = out.supportedSampleRates();
         foreach(int f, qfrl) jfrl.append(f);
         return t_setup_entry(jfrl, "Hz");  //recent list
     }
@@ -76,20 +74,21 @@ protected slots:
     }
 
 public:
-    rt_snd_in_fp(const QAudioDeviceInfo in = QAudioDeviceInfo::defaultInputDevice(),
+    rt_snd_out_fp(const QAudioDeviceInfo in = QAudioDeviceInfo::defaultOutputDevice(),
                  QObject *parent = NULL):
-        rt_snd_in_qt(in, parent),
+        rt_snd_out_qt(in, parent),
         worker(__helper_fs_list(in))
     {
         init(&worker);
         on_change();
     }
 
-    virtual ~rt_snd_in_fp(){
+    virtual ~rt_snd_out_fp(){
         //empty
     }
 };
 
 
-#endif // RT_SND_IN_QT
+
+#endif // RT_SOURCES_H
 

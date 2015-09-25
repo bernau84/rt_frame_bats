@@ -1,13 +1,5 @@
 
 {
-    "Sampling":{
-        "__info": "playback frequency"
-        "__def": 8000,
-        "8khz": 8000,
-        "16kHz": 16000,
-        "32kHz": 32000,
-        "48kHz": 48000
-    },
     "Multibuffer": {
         "__info": "size of Z buffer (number of slices)",
         "small(10)": 10,
@@ -18,7 +10,7 @@
         "__def": 30,
         "__min": 1
     },
-    "Refresh": {
+    "Time": {
         "__info": "duration of one time slice in multibuffer",
         "slow 1s": 1.0,
         "slow 1/2s": 0.5,
@@ -30,4 +22,19 @@
         "__def": 0.125,
         "__min": 0.001
     },
+    "Rates": {
+        "__info": "avaiable sampling frequencies",
+        "8kHz": 8000,
+        "__def": 8000
+    },
+    "__refresh_rate": {
+        "__info": "inner rate of refresh multibuffer per time resolution",
+        "1x": 1.0,
+        "2x": 0.5,
+        "5x": 0.25,
+        "10x": 0.125,
+        "100x": 0.0625,
+        "__def": 0.125,
+        "__min": 0.001
+    }
 }

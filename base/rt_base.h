@@ -95,8 +95,11 @@ public:
     void notify_all(e_rt_signals sig, const void *data){
 
         for(unsigned i=0; i<subscribers.size(); i++)
-            if(sig == RT_SIG_SOURCE_UPDATED) subscribers[i]->on_update(data);
+            if(subscribers[i] != this){ //prevent recursion when using buffer for itself
+
+                if(sig == RT_SIG_SOURCE_UPDATED) subscribers[i]->on_update(data);
                 else if(sig == RT_SIG_SOURCE_UPDATED) subscribers[i]->on_change();
+            }
     }
 
     /*! \brief notification signal handlihg - direct or queued
