@@ -31,10 +31,20 @@ int main(int argc, char *argv[])
         ai_w_pwr->connection(aidev);
         aodev->connection(aifilt);
 
+        /*
+        double half_band_coe[] = {
+             #include "analysis\filter_half_b_cheby_fir_coe2.h";
+        };
+
+        unsigned half_band_coe_N = sizeof(half_band_coe) / sizeof(double);
+        T half_band_coe_T[half_band_coe_N];
+        for(int i=0; i<half_band_coe_N; i++)  half_band_coe_T[i] = T(half_band_coe[i]);
+        */
+
         //aibat->start();
         aifilt->start();
         ai_w_pwr->start();
-        aodev->start();
+        //aodev->start();
         aidev->start(); //cele to odstartujem
     }
 

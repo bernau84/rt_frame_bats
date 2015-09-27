@@ -26,6 +26,6 @@
         "mean power": "SQUARE",        
         "ac abs": "AC_ABS",  
         "ac power": "AC_SQUARE",          
-        "__def": "AC_SQUARE"   
+        "__def": "SQUARE"
     }    
 }

@@ -54,6 +54,7 @@ public:
 };
 
 /*! \brief  */
+#define RT_AC_NONLIN_REMOVAL_STEP   (1.0 / cTN)   //follow desired averaging time and range +/-1
 template <typename T> void t_rt_pwr_te<T>::update(t_rt_slice<T> &smp){
 
     for(unsigned i=0; i<smp.A.size(); i++){
@@ -63,10 +64,10 @@ template <typename T> void t_rt_pwr_te<T>::update(t_rt_slice<T> &smp){
         if(row.A.size() == 0){ //
 
             row = (M) ? t_rt_slice<T>(t, M, (T)0) :   //version with fixed known slice size
-                        t_rt_slice<T>(t, smp.A.size(), (T)0);  //auto-slice size (derived from input with respect to decimation)
+              t_rt_slice<T>(t, smp.A.size(), (T)0);  //auto-slice size (derived from input with respect to decimation)
         }
 
-        int cTN = TA * smp.I[i];
+        int cTN = TA * smp.I[i] * 2;
         if(cTN <= 0) cTN = 1;
 
         if(cTN != TN) //time properties changed
@@ -76,7 +77,7 @@ template <typename T> void t_rt_pwr_te<T>::update(t_rt_slice<T> &smp){
 
         if((m_method == RT_PWR_AC_ABS) || (m_method == RT_PWR_AC_SQUARE)){
 
-            m_dc += (pwr > m_dc) ? +1 : -1; //slow notch nonlinedar dc removal - lower precision 1 bit minus
+            m_dc += (pwr > m_dc) ? +RT_AC_NONLIN_REMOVAL_STEP  : (pwr < m_dc) ? -RT_AC_NONLIN_REMOVAL_STEP : 0; //slow notch nonlinedar dc removal - lower precision 1 bit minus
             pwr -= m_dc;
         }
 

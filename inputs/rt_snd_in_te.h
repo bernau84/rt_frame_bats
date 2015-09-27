@@ -1,7 +1,7 @@
 #ifndef RT_SND_IN
 #define RT_SND_IN
 
-#define RT_SND_IN_SIMUL_F   1000
+#define RT_SND_IN_SIMUL_F   1800
 
 #include <stdint.h>
 #include <math.h>
@@ -32,8 +32,8 @@ public:
             return;
 
 #ifdef RT_SND_IN_SIMUL_F
-        //T dbg = 0.8 * sin(RT_SND_IN_SIMUL_F * (2*M_PI*nproc) / fs);
-        T dbg = nproc;
+        T dbg = 1.0 * sin(RT_SND_IN_SIMUL_F * (2*M_PI*nproc) / fs);
+        //T dbg = nproc;
         sample = &dbg;
 #endif //RT_SND_IN_SIMUL_F
 

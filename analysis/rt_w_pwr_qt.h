@@ -33,6 +33,7 @@ public:
        //finish initialization of filters and buffer
        change();
        trc.enable(TR_LEVEL_ALL, "w_pwr");
+       //filter.par["Filter"].sel("fir-half-hp-N160"); /*! \todo - put to main */
     }
 
     virtual ~t_rt_w_pwr_te(){;}
@@ -45,7 +46,7 @@ template <typename T> void t_rt_w_pwr_te<T>::update(const void *sample){
 
     trc.start_meas();
 
-    filter.on_update(sample);
+    filter.on_update(sample); //simplyfied - better is read all from source buffer
     while(filter.readSpace(0))
         power.on_update(filter.read(0));
 
