@@ -58,27 +58,43 @@ public:
          if(!in.is_open())
              return -1;
 
-         int av = in.gcount() / header.bytes_per_sample;
-         if(size > av) size = av;
+         int overal = 0;
+         while(overal < size){
 
-         char data[size * header.bytes_per_sample];
-         in.read(data, size);
+             int psize = (size - overal) * header.bytes_per_sample;
+             char data[psize];
+             psize = in.readsome(data, psize);
 
-         if(in.rdstate() & std::ifstream::eofbit)
-             if(cyclic)
-                 in.seekg(0, in.beg);
+             unsigned char *data_08 = (unsigned char *)data;
+             short         *data_16 = (short         *)data;
 
-         unsigned char *data_08 = (unsigned char *)data;
-         short         *data_16 = (short         *)data;
+             switch( header.bytes_per_sample ){ //formatovani <-0.5, 0.5>
 
-         switch( header.bytes_per_sample ){ //formatovani <-0.5, 0.5>
+               case(1):
+                 for(int i=0; i<psize; i++) dest[overal++] = data_08[i]/256.0/2 - 1.0;
+               break;
+               case(2):
+                 for(int i=0; i<psize/2; i++) dest[overal++] = data_16[i]/65536.0/2;
+               break;
+               default:
+                 size = 0;
+               break;
+             }
 
-           case(1): for( int i=0; i<size; i++ ) dest[i] = data_08[i]/256.0/2 - 1.0; break;
-           case(2): for( int i=0; i<size/2; i++ ) dest[i] = data_16[i]/65536.0/2; break;
-           default: size = 0; break;
+             if(in.rdstate() & std::ifstream::eofbit){
+
+                 if(cyclic){
+
+                     in.seekg(0, in.beg);
+                     in.read((char *)&header, sizeof(header));
+                 } else {
+
+                     break;
+                 }
+             }
          }
 
-         return size / header.bytes_per_sample;
+         return overal;
      }
 
 

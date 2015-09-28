@@ -87,19 +87,19 @@ public:
      {
         t_wav_header iheader = {
 
-           {'R','I','F','F'},
-           sizeof(t_wav_header),
-           {'W','A','V','E'},
-           {'f','m','t',' '},
-           16,
-           1,
-           channels,
-           fs,
-           (fs * precision * channels) / 8,
-           (unsigned short)((precision * channels) / 8),
-           precision,
-           {'d','a','t','a'},
-           0
+           {'R','I','F','F'},       //        char  		ascii_riff[4];
+           sizeof(t_wav_header),    //        unsigned long 	total_bytes;
+           {'W','A','V','E'},       //        char  		ascii_wave[4];
+           {'f','m','t',' '},       //        char              ascii_fmt[4];
+           16,                      //        unsigned long 	pcm_10format;
+           1,                       //        unsigned short 	pcm_01format;
+           channels,                //        unsigned short 	num_channels;
+           fs,                      //        unsigned long 	sample_frequency;
+           (fs * precision * channels) / 8,             //        unsigned long 	bytes_per_second;
+           (unsigned short)((precision * channels) / 8),//        unsigned short 	bytes_per_sample;
+           precision,               //        unsigned short 	bites_per_sample;
+           {'d','a','t','a'},       //        char  		ascii_data[4];
+           0                        //unsigned long 	bytes_to_follow;
         };
 
         header = iheader;
