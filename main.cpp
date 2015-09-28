@@ -10,6 +10,9 @@
 #include "inputs\rt_snd_in_qt.h"
 #include "outputs\rt_snd_out_qt.h"
 
+#include "inputs\wav_read_file.h"
+#include "outputs\wav_write_file.h"
+
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -40,6 +43,18 @@ int main(int argc, char *argv[])
         T half_band_coe_T[half_band_coe_N];
         for(int i=0; i<half_band_coe_N; i++)  half_band_coe_T[i] = T(half_band_coe[i]);
         */
+
+        t_waw_file_reader wiex("c:\\Users\\bernau84\\Documents\\sandbox\\simulace\\chirp_20_8000_fs16kHz.wav", true);
+        t_waw_file_reader::t_wav_header inf; wiex.info(inf);
+
+        t_waw_file_writer woex("c:\\Users\\bernau84\\Documents\\sandbox\\chirp_20_8000_fs16kHz_copy.wav", 1, 8);
+
+        for(int i=0; i<1000; i++){
+
+            double tmp[300];
+            wiex.read(tmp, 300);
+            woex.write(tmp, 300);
+        }
 
         //aibat->start();
         aifilt->start();

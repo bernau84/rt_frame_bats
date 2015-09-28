@@ -1,12 +1,10 @@
-#ifndef RT_SND_OUT_TE
-#define RT_SND_OUT_TE
+#ifndef RT_WAV_IN_QT
+#define RT_WAV_IN_QT
 
-#include <stdint.h>
-#include <math.h>
+#include "../base/rt_dataflow.h"
+#include "../base/rt_node.h"
 
-#include "base\rt_base.h"
-
-template<typename T> class t_rt_snd_out_te : public i_rt_base {
+template<typename T> class t_rt_wav_in_te : public i_rt_base {
 
 protected:
     //local properties
@@ -28,6 +26,12 @@ public:
 
         if(!buf || !sample)
             return;
+
+#ifdef RT_SND_IN_SIMUL_F
+        T dbg = 1.0 * sin(RT_SND_IN_SIMUL_F * (2*M_PI*nproc) / fs);
+        //T dbg = nproc;
+        sample = &dbg;
+#endif //RT_SND_IN_SIMUL_F
 
         row.append(*(T *)sample, fs/2.0); //sample an its freq resolution = nyquist
         nproc += 1;
@@ -51,24 +55,25 @@ public:
 
         //optionaly
         row = t_rt_slice<T>(nproc/fs, M, (T)0);  //recent slice reset
+        //nproc = 0;
+
+        signal(RT_SIG_SOURCE_UPDATED, "something"); //inform sucessor and may be the sampler as well
     }
 
-    t_rt_snd_out_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsink.txt")):
+    t_rt_wav_in_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_wavsource.txt")):
         i_rt_base(resource, RT_QUEUED),
         buf(NULL)
     {
         par.replace("Rates", freq);  //update list
         nproc = 0;
         change();
-
-        subscribe(this); //reserve fist reader for itself
     }
 
-    virtual ~t_rt_snd_out_te(){
+    virtual ~t_rt_wav_in_te(){
 
         if(buf) delete buf;
     }
 };
 
-#endif // RT_SND_OUT_TE
+#endif // RT_WAV_IN_QT
 

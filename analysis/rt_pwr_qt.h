@@ -59,7 +59,7 @@ template <typename T> void t_rt_pwr_te<T>::update(t_rt_slice<T> &smp){
 
     for(unsigned i=0; i<smp.A.size(); i++){
 
-        double t = smp.t + i/(2*smp.I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
+        double t = smp.t + i/(2 * smp.I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
 
         if(row.A.size() == 0){ //
 
@@ -67,7 +67,7 @@ template <typename T> void t_rt_pwr_te<T>::update(t_rt_slice<T> &smp){
               t_rt_slice<T>(t, smp.A.size(), (T)0);  //auto-slice size (derived from input with respect to decimation)
         }
 
-        int cTN = TA * smp.I[i] * 2;
+        int cTN = TA * 2 * smp.I[i];
         if(cTN <= 0) cTN = 1;
 
         if(cTN != TN) //time properties changed
@@ -94,7 +94,7 @@ template <typename T> void t_rt_pwr_te<T>::update(t_rt_slice<T> &smp){
 
             buf_append(row); //write
             row.A.clear(); //force new row initializacion
-       }
+        }
     }
 }
 

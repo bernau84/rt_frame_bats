@@ -43,7 +43,11 @@ HEADERS  +=\
     base/rt_base_slbuf_ex.h \
     analysis/rt_w_pwr_qt.h \
     outputs/rt_snd_out_qt.h \
-    outputs/rt_snd_out_te.h
+    outputs/rt_snd_out_te.h \
+    inputs/rt_wav_in_qt.h \
+    inputs/wav_read_file.h \
+    outputs/wav_write_file.h \
+    outputs/rt_wav_out_qt.h
 
 FORMS    +=
 
@@ -61,6 +65,9 @@ OTHER_FILES += \
 
 RESOURCES += \
     rt_res_defaults.qrc
+
+DISTFILES += \
+    js_config_wavsource.txt
 
 
 
