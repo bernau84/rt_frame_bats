@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
         //aibat->connection(aidev);
         aifilt->connection(aidev);
         ai_w_pwr->connection(aidev);
-        aodev->connection(aifilt);
+        aodev->connection(aidev);
 
         /*
         double half_band_coe[] = {
@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
         for(int i=0; i<half_band_coe_N; i++)  half_band_coe_T[i] = T(half_band_coe[i]);
         */
 
+        /*
         t_waw_file_reader wiex("c:\\Users\\bernau84\\Documents\\sandbox\\simulace\\chirp_20_8000_fs16kHz.wav", true);
         t_waw_file_reader::t_wav_header inf; wiex.info(inf);
 
@@ -55,11 +56,12 @@ int main(int argc, char *argv[])
             wiex.read(tmp, 300);
             woex.write(tmp, 300);
         }
+        */
 
         //aibat->start();
         aifilt->start();
         ai_w_pwr->start();
-        //aodev->start();
+        aodev->start();
         aidev->start(); //cele to odstartujem
     }
 

@@ -32,7 +32,7 @@ public:
             return;
 
 #ifdef RT_SND_IN_SIMUL_F
-        T dbg = 1.0 * sin(RT_SND_IN_SIMUL_F * (2*M_PI*nproc) / fs);
+        T dbg = 0.05 * sin(RT_SND_IN_SIMUL_F * (2*M_PI*nproc) / fs);
         //T dbg = nproc;
         sample = &dbg;
 #endif //RT_SND_IN_SIMUL_F
