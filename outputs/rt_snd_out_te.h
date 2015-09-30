@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "base\rt_base.h"
+#include "base\rt_base_slbuf_ex.h"
 
-template<typename T> class t_rt_snd_out_te : public i_rt_base {
+template<typename T> class t_rt_snd_out_te : public virtual i_rt_base_slbuf_ex<T> {
 
 protected:
     //local properties
@@ -16,26 +16,31 @@ protected:
     uint64_t nproc; //number of proceed samples
 
     t_rt_slice<T> row;                     /*! active row in multibuffer */
-    rt_idf_circ_simo<t_rt_slice<T> > *buf;  /*! spectrum buffer */
+
+    using i_rt_base_slbuf_ex<T>::par;
+    using i_rt_base_slbuf_ex<T>::buf_resize;
+    using i_rt_base_slbuf_ex<T>::buf_append;
+    using i_rt_base_slbuf_ex<T>::subscribe;
 
 public:
-    virtual const void *read(int n){ return (buf) ? buf->read(n) : NULL; }
-    virtual const void *get(int n){ return (buf) ? buf->get(n) : NULL;  }
-    virtual int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
-
     /*! \brief format & copy samples into the multibuffer */
-    virtual void update(const void *sample){
+    virtual void update(t_rt_slice<T> &smp){
 
-        if(!buf || !sample)
-            return;
+        for(unsigned i=0; i<smp.A.size(); i++){ //just copy to another buffer
 
-        row.append(*(T *)sample, fs/2.0); //sample an its freq resolution = nyquist
-        nproc += 1;
+            if(row.A.size() == 0){ //
 
-        if(row.isfull()){
+                double t = smp.t + i/(2*smp.I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
+                row = (M) ? t_rt_slice<T>(t, M, (T)0) :   //version with fixed known slice size
+                            t_rt_slice<T>(t, smp.A.size(), (T)0);  //auto-slice size (derived from input with respect to decimation)
+            }
 
-            signal(RT_SIG_SOURCE_UPDATED, buf->write(&row)); //write & signal with global pointer inside buffer
-            row = t_rt_slice<T>(nproc / fs, M, (T)0); //and prepare new with current timestamp
+            row.append(smp.A[i], smp.I[i]); //D can reduce freq. resolution because of change fs
+            if(row.isfull()){  //in auto mode (M == 0) with last sample of input slice
+
+                buf_append(row); //write + send notifications
+                row.A.clear(); //force new row initializacion
+            }
         }
     }
 
@@ -46,16 +51,16 @@ public:
         N = par["Multibuffer"].get().toDouble(); //slice number
         M = fs * par["Time"].get().toDouble();  //[Hz] * refresh rate [s] = slice point
 
-        if(buf) delete buf;
-        buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(N);
+        buf_resize(N);
 
         //optionaly
         row = t_rt_slice<T>(nproc/fs, M, (T)0);  //recent slice reset
     }
 
     t_rt_snd_out_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsink.txt")):
-        i_rt_base(resource, RT_QUEUED),
-        buf(NULL)
+        i_rt_base(resource, RT_QUEUED),  //!!because i_rt_base is virtual base class, constructor has to be defined here!!
+        i_rt_base_slbuf_ex<T>(resource),
+        row(0, 0)
     {
         if(false == freq.empty())
             par.replace("Rates", freq);  //update list
@@ -67,8 +72,6 @@ public:
     }
 
     virtual ~t_rt_snd_out_te(){
-
-        if(buf) delete buf;
     }
 };
 
