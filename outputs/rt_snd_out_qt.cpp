@@ -54,6 +54,7 @@ void rt_snd_out_qt::stop(){
 
 void rt_snd_out_qt::statechanged(QAudio::State act){
 
+    error();
     Q_UNUSED(act);
 }
 
@@ -65,6 +66,7 @@ void rt_snd_out_qt::error(void){
     switch(output_audio->error()){
 
         case QAudio::NoError:       //No errors have occurred
+        break;
         case QAudio::OpenError:	//An error opening the audio device
         case QAudio::IOError:	//An error occurred during read/write of audio device
         case QAudio::UnderrunError:	//Audio data is not being fed to the audio device at a fast enough rate
@@ -77,32 +79,33 @@ void rt_snd_out_qt::error(void){
 
 void rt_snd_out_qt::notify_proc(){
 
-    if(state == Active){
+    if(state != Active)
+        return;
 
-        if(!output_io || !output_audio)
-            return;
+    if(!output_io || !output_audio)
+        return;
 
-        //sampleType unsigned
-        double scale = (1 << format.sampleSize()) / 2;  //<0, 2.0>
-        double offs = +1.0; //<-1.0, 1.0>
+    //sampleType unsigned
+    double scale = (1 << format.sampleSize()) / 2;  //<0, 2.0>
+    double offs = +1.0; //<-1.0, 1.0>
 
-        //sampleType signed
-        if(format.sampleType() == QAudioFormat::SignedInt){
+    //sampleType signed
+    if(format.sampleType() == QAudioFormat::SignedInt){
 
-            scale /= 2.0; offs = 0.0;
-        }
-
-        qint64 avaiable_l = 0, readable_l = output_audio->bytesFree();
-        short local_samples[readable_l];  //vycteni dostupneho
-
-        t_rt_slice<double> *out;
-        while((out = (t_rt_slice<double> *)base->read())) //reader 0 is reserved for internal usage in this case - see constructor
-            for(unsigned i=0; i<out->A.size(); i++)
-                if(avaiable_l < readable_l)  //data over are discarded
-                    local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
-
-        output_io->write((char *)local_samples, avaiable_l);
+        scale /= 2.0; offs = 0.0;
     }
+
+    qint64 avaiable_l = 0, writable_l = output_audio->bytesFree() / (format.sampleSize() / 8);
+    short local_samples[writable_l];  //vycteni dostupneho
+
+    t_rt_slice<double> *out;
+    while(NULL != (out = (t_rt_slice<double> *)base->read())) //reader 0 is reserved for internal usage in this case - see constructor
+        for(unsigned i=0; i<out->A.size(); i++)
+            if(avaiable_l < writable_l)  //data over are discarded
+                local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
+
+    if(avaiable_l)
+        output_io->write((char *)local_samples, avaiable_l);
 }
 
 void rt_snd_out_qt::config_proc(int sampling_rate, int refresh_rate){
@@ -133,7 +136,7 @@ void rt_snd_out_qt::config_proc(int sampling_rate, int refresh_rate){
 
     output_audio->setNotifyInterval(refresh_rate);  //navic mame to od byteready
     connect(output_audio, SIGNAL(notify()), this, SLOT(notify_proc()));
-    //connect(input_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
+    connect(output_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
 }
 
 

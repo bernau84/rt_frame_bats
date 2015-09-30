@@ -50,8 +50,10 @@ protected slots:
                 sig = base->pop_signal()){
 
                 //base->notify_all(sig.first, sig.second); //direct call
-                if(sig.first == RT_SIG_SOURCE_UPDATED) emit signal_update(sig.second); //qt signal/slot - worker was updated
-                if(sig.first == RT_SIG_CONFIG_CHANGED) emit signal_change(); //qt signal/slot - worker config has changed; probably newer hapend
+                if(sig.first == RT_SIG_SOURCE_UPDATED)
+                    emit signal_update(sig.second); //qt signal/slot - worker was updated
+                if(sig.first == RT_SIG_CONFIG_CHANGED)
+                    emit signal_change(); //qt signal/slot - worker config has changed; probably newer hapend
             }
         }
     }

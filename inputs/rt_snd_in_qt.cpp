@@ -93,9 +93,9 @@ void rt_snd_in_qt::notify_proc(){
             scale /= 2.0; offs = 0.0;
         }
 
-        qint64 avaiable_l = input_audio->bytesReady();//input_io->bytesAvailable();
+        qint64 avaiable_l = input_audio->bytesReady() / (format.sampleSize() / 2);//input_io->bytesAvailable();
         short local_samples[avaiable_l], *v = local_samples;  //vycteni dostupneho
-        qint64 readable_l = input_io->read((char *)local_samples, avaiable_l);
+        qint64 readable_l = input_io->read((char *)local_samples, sizeof(local_samples));
 
         while(readable_l--){
 

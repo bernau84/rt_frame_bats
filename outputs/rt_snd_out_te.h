@@ -10,10 +10,8 @@ template<typename T> class t_rt_snd_out_te : public virtual i_rt_base_slbuf_ex<T
 
 protected:
     //local properties
-    int M;      //refresh rate in number of samples in one row
+    int M;      //refresh rate in number of samples in one row - if known
     int N;      //multibuffer length
-    double fs;  //sampling freq
-    uint64_t nproc; //number of proceed samples
 
     t_rt_slice<T> row;                     /*! active row in multibuffer */
 
@@ -47,14 +45,19 @@ public:
     /*! \brief reinit buffers and local properties according to actual setting */
     virtual void change(){
 
-        fs = par["Rates"].get().toDouble();  //actual frequency
+        //fs = par["Rate"].get().toDouble();  //output frequency
+
+        /*! \todo - hm....shoul be varible accroding to freq. resolution of samples
+         * we need to promote change from worker to qt node to adjust sound card or whatever
+         *
+         * solution - fire signal CONFIG_CHANGE from update() and catch it in node in special manner -
+         * before promotion to follower nod re-set data sink device to new sample rate
+         */
+
         N = par["Multibuffer"].get().toDouble(); //slice number
-        M = fs * par["Time"].get().toDouble();  //[Hz] * refresh rate [s] = slice point
+        M = par["Slice"].get().toDouble();  //[Hz] * refresh rate [s] = slice point
 
         buf_resize(N);
-
-        //optionaly
-        row = t_rt_slice<T>(nproc/fs, M, (T)0);  //recent slice reset
     }
 
     t_rt_snd_out_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsink.txt")):
@@ -63,9 +66,9 @@ public:
         row(0, 0)
     {
         if(false == freq.empty())
-            par.replace("Rates", freq);  //update list
+            par.replace("Rate", freq);  //update list - not sure if it is ideal; should be automatic according to input samples
+                    //but ok; user can set fixed (for wav recording for example)
 
-        nproc = 0;
         change();
 
         subscribe(this); //reserve fist reader for itself

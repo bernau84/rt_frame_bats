@@ -10,20 +10,17 @@
         "__def": 30,
         "__min": 1
     },
-    "Time": {
-        "__info": "duration of one time slice in multibuffer",
-        "slow 1s": 1.0,
-        "slow 1/2s": 0.5,
-        "norm 1/4s": 0.25,
-        "norm 1/8s": 0.125,
-        "fast 1/16s": 0.0625,
-        "fast 1/32s": 0.03125,
-        "instant": 0,
-        "__def": 0.125,
-        "__min": 0.001
+    "Slice": {
+        "__info": "size of X buffer (length of time slices)",
+        "auto(0)": 0,
+        "small(10)": 10,
+        "wide(100)": 100,
+        "__def": 0,
+        "__min": 1
     },
     "Rate": {
-        "__info": "avaiable sampling frequencies",
+        "__info": "avaiable/fixed sampling frequencies (auto - controled by freq. of samples)",
+        "auto": 0,
         "8kHz": 8000,
         "__def": 8000
     },
