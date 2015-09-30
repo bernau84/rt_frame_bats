@@ -69,7 +69,7 @@ protected slots:
      * updated setup has to be delivered somehow */
     void on_change(){
 
-        int fs = worker.setup("Rates").toDouble();
+        int fs = worker.setup("Rate").toDouble();
         int rr = 1000 * worker.setup("__refresh_rate").toDouble();
         config_proc(fs, rr);
         rt_node::on_change();

@@ -3,75 +3,78 @@
 
 #include "../base/rt_dataflow.h"
 #include "../base/rt_node.h"
+#include "rt_snd_in_te.h"
+#include "wav_read_file.h"
+#include <QTimer>
 
-template<typename T> class t_rt_wav_in_te : public i_rt_base {
+/*! \brief final assembly of rt_node and template of soundcard input
+ * floating point version*/
+class rt_wav_in_fp : public rt_node {
+
+    Q_OBJECT
 
 protected:
-    //local properties
-    int M;      //refresh rate in number of samples in one row
-    int N;      //multibuffer length
-    double fs;  //sampling freq
-    uint64_t nproc; //number of proceed samples
+    QTimer tick;
+    t_rt_snd_in_te<double> worker;
+    t_waw_file_reader *file;
 
-    t_rt_slice<T> row;                     /*! active row in multibuffer */
-    rt_idf_circ_simo<t_rt_slice<T> > *buf;  /*! spectrum buffer */
+    t_setup_entry __helper_fs_list(QList<int> qfrl = QList<int>()){
 
-public:
-    virtual const void *read(int n){ return (buf) ? buf->read(n) : NULL; }
-    virtual const void *get(int n){ return (buf) ? buf->get(n) : NULL;  }
-    virtual int readSpace(int n){ return (buf) ? buf->readSpace(n) : -1; }
+        QJsonArray jfrl;  //conversion
+        foreach(int f, qfrl) jfrl.append(f);
+        return t_setup_entry(jfrl, "Hz");  //recent list
+    }
 
-    /*! \brief format & copy samples into the multibuffer */
-    virtual void update(const void *sample){
+public slots:
 
-        if(!buf || !sample)
+    virtual void start(){   //override rt_node start
+
+        tick.start();
+        rt_node::start();
+    }
+    virtual void stop(){    //override rt_node stop
+
+        tick.stop();
+        rt_node::stop();
+    }
+
+protected slots:
+    void notify_proc(void){
+
+        if(state != Active)
             return;
 
-#ifdef RT_SND_IN_SIMUL_F
-        T dbg = 1.0 * sin(RT_SND_IN_SIMUL_F * (2*M_PI*nproc) / fs);
-        //T dbg = nproc;
-        sample = &dbg;
-#endif //RT_SND_IN_SIMUL_F
+        int T = worker.setup("Time");
+        int FS = worker.setup("Rates");
 
-        row.append(*(T *)sample, fs/2.0); //sample an its freq resolution = nyquist
-        nproc += 1;
+        double tmp[T*FS];
+        int N = file->read(tmp, T*FS);
 
-        if(row.isfull()){
-
-            signal(RT_SIG_SOURCE_UPDATED, buf->write(&row)); //write & signal with global pointer inside buffer
-            row = t_rt_slice<T>(nproc / fs, M, (T)0); //and prepare new with current timestamp
-        }
+        for(int n=0; n<N; n++)
+            rt_node::on_update(&tmp[n]); //sample by sample - if row is full, signal is fired
     }
 
-    /*! \brief reinit buffers and local properties according to actual setting */
-    virtual void change(){
+    virtual void on_change(){ //override change slot
 
-        fs = par["Rates"].get().toDouble();  //actual frequency
-        N = par["Multibuffer"].get().toDouble(); //slice number
-        M = fs * par["Time"].get().toDouble();  //[Hz] * refresh rate [s] = slice point
-
-        if(buf) delete buf;
-        buf = (rt_idf_circ_simo<t_rt_slice<T> > *) new rt_idf_circ_simo<t_rt_slice<T> >(N);
-
-        //optionaly
-        row = t_rt_slice<T>(nproc/fs, M, (T)0);  //recent slice reset
-        //nproc = 0;
-
-        signal(RT_SIG_SOURCE_UPDATED, "something"); //inform sucessor and may be the sampler as well
+        worker->on_change();
+        int T = worker.setup("Time");
+        tick.setInterval(1000 * T);
+        emit signal_update(this);
     }
 
-    t_rt_wav_in_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_wavsource.txt")):
-        i_rt_base(resource, RT_QUEUED),
-        buf(NULL)
+public:
+    rt_wav_in_fp(QObject *parent = NULL):
+        rt_node(parent),
+        tick(this),
+        worker(__helper_fs_list)
     {
-        par.replace("Rates", freq);  //update list
-        nproc = 0;
-        change();
+        init(&worker);
+        connect(tick, SIGNAL(timeout), this, SLOT(notify_proc()));
+        on_change();
     }
 
-    virtual ~t_rt_wav_in_te(){
-
-        if(buf) delete buf;
+    virtual ~rt_snd_in_fp(){
+        //empty
     }
 };
 

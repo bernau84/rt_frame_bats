@@ -57,7 +57,9 @@ public:
         i_rt_base(resource, RT_QUEUED),
         buf(NULL)
     {
-        par.replace("Rates", freq);  //update list
+        if(false == freq.empty())
+            par.replace("Rates", freq);  //update list
+
         nproc = 0;
         change();
 

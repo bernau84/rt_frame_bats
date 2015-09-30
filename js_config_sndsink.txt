@@ -22,7 +22,7 @@
         "__def": 0.125,
         "__min": 0.001
     },
-    "Rates": {
+    "Rate": {
         "__info": "avaiable sampling frequencies",
         "8kHz": 8000,
         "__def": 8000

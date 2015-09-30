@@ -62,8 +62,10 @@ public:
          while(overal < size){
 
              int psize = (size - overal) * header.bytes_per_sample;
-             char data[psize];
-             psize = in.readsome(data, psize);
+             char data[psize]; //memset(data, '-', psize);
+
+             in.read(data, psize);
+             psize = in.gcount(); //number ob bytes from last get op
 
              unsigned char *data_08 = (unsigned char *)data;
              short         *data_16 = (short         *)data;
@@ -74,7 +76,7 @@ public:
                  for(int i=0; i<psize; i++) dest[overal++] = data_08[i]/256.0/2 - 1.0;
                break;
                case(2):
-                 for(int i=0; i<psize/2; i++) dest[overal++] = data_16[i]/65536.0/2;
+                 for(int i=0; i<psize/2; i++) dest[overal++] = (data_16[i]/65536.0) * 2;
                break;
                default:
                  size = 0;
@@ -85,6 +87,7 @@ public:
 
                  if(cyclic){
 
+                     in.clear();  // !clears fail and eof bits
                      in.seekg(0, in.beg);
                      in.read((char *)&header, sizeof(header));
                  } else {

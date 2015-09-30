@@ -44,7 +44,7 @@ public:
     }
 };
 
-/*! \brief final assembly of rt_node and template of soundcard input
+/*! \brief final assembly of rt_node and template of soundcard in
  * floating point version*/
 class rt_snd_out_fp : public rt_snd_out_qt {
 

@@ -62,12 +62,12 @@ public:
 
             switch( header.bytes_per_sample ){ //formatovani <-0.5, 0.5>
                 case(1): {
-                    unsigned char data_08 = (data[i] + 1.0)*256;
+                    unsigned char data_08 = (data[i] + 1.0)*256/2;
                     out.write((char *)&data_08, 1);
                 }
                 break;
                 case(2): {
-                    unsigned char data_16 = (data[i] + 1.0)*65536;
+                    unsigned char data_16 = (data[i] + 1.0)*65536/2;
                     out.write((char *)&data_16, 2);
                 }
                 break;

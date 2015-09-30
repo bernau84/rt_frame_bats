@@ -44,12 +44,12 @@ int main(int argc, char *argv[])
         for(int i=0; i<half_band_coe_N; i++)  half_band_coe_T[i] = T(half_band_coe[i]);
         */
 
-        t_waw_file_reader wiex("c:\\Users\\bernau84\\Documents\\sandbox\\simulace\\chirp_20_8000_fs16kHz.wav", true);
+        t_waw_file_reader wiex("c:\\mares\\Audio\\10multi_harm_sin_08.wav", true);
         t_waw_file_reader::t_wav_header inf; wiex.info(inf);
 
-        t_waw_file_writer woex("c:\\Users\\bernau84\\Documents\\sandbox\\chirp_20_8000_fs16kHz_copy.wav", 8000, 1, 8);
+        t_waw_file_writer woex("c:\\mares\\Audio\\10multi_harm_sin_08_copy.wav", 8000, 1, 8);
 
-        for(int i=0; i<1000; i++){
+        for(int i=0; i<2000; i++){
 
             double tmp[300];
             wiex.read(tmp, 300);

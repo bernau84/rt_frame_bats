@@ -50,7 +50,7 @@ public:
     /*! \brief reinit buffers and local properties according to actual setting */
     virtual void change(){
 
-        fs = par["Rates"].get().toDouble();  //actual frequency
+        fs = par["Rate"].get().toDouble();  //actual frequency
         N = par["Multibuffer"].get().toDouble(); //slice number
         M = fs * par["Time"].get().toDouble();  //[Hz] * refresh rate [s] = slice point
 
