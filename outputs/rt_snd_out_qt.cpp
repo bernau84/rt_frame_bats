@@ -95,6 +95,12 @@ void rt_snd_out_qt::notify_proc(){
         scale /= 2.0; offs = 0.0;
     }
 
+    int bs = output_audio->bufferSize();
+    int ps = output_audio->periodSize();  /*! \todo size of bytes block for feed io */
+    int bf = output_audio->bytesFree();
+
+    qDebug() << QString::number(bs) << " / " << QString::number(ps) << " / " << QString::number(bf);
+
     qint64 avaiable_l = 0, writable_l = output_audio->bytesFree() / (format.sampleSize() / 8);
     short local_samples[writable_l];  //vycteni dostupneho
 

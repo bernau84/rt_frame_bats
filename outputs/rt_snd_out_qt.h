@@ -74,10 +74,10 @@ protected slots:
     }
 
 public:
-    rt_snd_out_fp(const QAudioDeviceInfo in = QAudioDeviceInfo::defaultOutputDevice(),
+    rt_snd_out_fp(const QAudioDeviceInfo out = QAudioDeviceInfo::defaultOutputDevice(),
                  QObject *parent = NULL):
-        rt_snd_out_qt(in, parent),
-        worker(__helper_fs_list(in))
+        rt_snd_out_qt(out, parent),
+        worker(__helper_fs_list(out))
     {
         init(&worker);
         on_change();
