@@ -21,18 +21,24 @@ int main(int argc, char *argv[])
     for(int i=0; i<infos.count(); i++)
         qDebug() << infos[i].deviceName();
 
+    rt_snd_out_qt sndout(QAudioDeviceInfo::defaultOutputDevice());
+
     if(infos.count()){
 
-        rt_snd_in_fp *aidev = new rt_snd_in_fp(); //berem prvni dobrou
+
+        //sndout.config_proc(8000, 20);
+        //sndout.start();
+
+        //rt_snd_in_fp *aidev = new rt_snd_in_fp(); //berem prvni dobrou
         //rt_cpb_fp *aibat = new rt_cpb_fp(); //navazame na vzorkovac
-        rt_filter_fp *aifilt = new rt_filter_fp(); //navazame na vzorkovac
-        rt_w_pwr_fp *ai_w_pwr = new rt_w_pwr_fp(); //navazame na vzorkovac
-        rt_snd_out_fp *aodev = new rt_snd_out_fp(); //audio output
+        //rt_filter_fp *aifilt = new rt_filter_fp(); //navazame na vzorkovac
+        //rt_w_pwr_fp *ai_w_pwr = new rt_w_pwr_fp(); //navazame na vzorkovac
+        //rt_snd_out_fp *aodev = new rt_snd_out_fp(); //audio output
 
         //aibat->connection(aidev);
-        aifilt->connection(aidev);
-        ai_w_pwr->connection(aidev);
-        aodev->connection(aidev);
+        //aifilt->connection(aidev);
+        //ai_w_pwr->connection(aidev);
+        //aodev->connection(aidev);
 
         /*
         double half_band_coe[] = {
@@ -60,10 +66,10 @@ int main(int argc, char *argv[])
         */
 
         //aibat->start();
-        aifilt->start();
-        ai_w_pwr->start();
-        aodev->start();
-        aidev->start(); //cele to odstartujem
+        //aifilt->start();
+        //ai_w_pwr->start();
+        //aodev->start();
+        //aidev->start(); //cele to odstartujem
     }
 
     return a.exec();

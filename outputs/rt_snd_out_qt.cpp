@@ -4,7 +4,10 @@
 //override rt_node start
 void rt_snd_out_qt::start(){
 
-    rt_node::start();
+    //rt_node::start();
+
+    output_io = output_audio->start();
+    return;
 
     if(!output_audio)
         return;
@@ -19,7 +22,7 @@ void rt_snd_out_qt::start(){
             break;
         case QAudio::StoppedState:
             if(output_io) disconnect(output_io, 0, this, 0);
-            if((output_io = output_audio->start())){  //zapiname pull mode
+            if((output_io = output_audio->start())){  //zapiname push mode
 
                 //connect(input_io, SIGNAL(readyRead()), this, SLOT(process()));
             }
@@ -32,7 +35,7 @@ void rt_snd_out_qt::start(){
 //override rt_node stop
 void rt_snd_out_qt::stop(){
 
-    rt_node::stop();
+    //rt_node::stop();
 
     if(!output_audio)
         return;
@@ -79,8 +82,8 @@ void rt_snd_out_qt::error(void){
 
 void rt_snd_out_qt::notify_proc(){
 
-    if(state != Active)
-        return;
+//    if(state != Active)
+//        return;
 
     if(!output_io || !output_audio)
         return;
@@ -104,11 +107,14 @@ void rt_snd_out_qt::notify_proc(){
     qint64 avaiable_l = 0, writable_l = output_audio->bytesFree() / (format.sampleSize() / 8);
     short local_samples[writable_l];  //vycteni dostupneho
 
-    t_rt_slice<double> *out;
-    while(NULL != (out = (t_rt_slice<double> *)base->read())) //reader 0 is reserved for internal usage in this case - see constructor
-        for(unsigned i=0; i<out->A.size(); i++)
-            if(avaiable_l < writable_l)  //data over are discarded
-                local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
+    //t_rt_slice<double> *out;
+    //while(NULL != (out = (t_rt_slice<double> *)base->read())) //reader 0 is reserved for internal usage in this case - see constructor
+    //    for(unsigned i=0; i<out->A.size(); i++)
+    //if(avaiable_l < writable_l)  //data over are discarded
+    //    local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
+
+    for(unsigned i=0; i<writable_l; i++)
+        local_samples[avaiable_l++] = 0.05 * sin(1500 * (2*M_PI*i)/format.sampleRate()); //(out->A[i] + offs) * scale;
 
     if(avaiable_l)
         output_io->write((char *)local_samples, avaiable_l);
@@ -120,13 +126,12 @@ void rt_snd_out_qt::config_proc(int sampling_rate, int refresh_rate){
         delete output_audio;
 
     //pevne
-    format.setByteOrder(QAudioFormat::LittleEndian);
-    format.setChannelCount(1);
-    format.setCodec("audio/pcm");
-    format.setSampleSize(16);
-    format.setSampleType(QAudioFormat::SignedInt);
-    //variabilni
     format.setSampleRate(sampling_rate);
+    format.setChannelCount(1);
+    format.setSampleSize(16);
+    format.setCodec("audio/pcm");
+    format.setByteOrder(QAudioFormat::LittleEndian);
+    format.setSampleType(QAudioFormat::SignedInt);
 
     if (!output_dev.isFormatSupported(format)) {
 
@@ -140,9 +145,15 @@ void rt_snd_out_qt::config_proc(int sampling_rate, int refresh_rate){
         return; //tak to neklaplo - takovy format nemame
     }
 
-    output_audio->setNotifyInterval(refresh_rate);  //navic mame to od byteready
+    output_audio->setNotifyInterval(20/*refresh_rate*/);  //navic mame to od byteready
     connect(output_audio, SIGNAL(notify()), this, SLOT(notify_proc()));
-    connect(output_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
+    //connect(output_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
+}
+
+void rt_snd_out_qt::timerEvent(QTimerEvent *event)
+{
+    //notify_proc();
+    qDebug() << "notif!";
 }
 
 

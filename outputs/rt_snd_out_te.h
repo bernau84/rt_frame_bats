@@ -6,12 +6,15 @@
 
 #include "base\rt_base_slbuf_ex.h"
 
+#define RT_SND_OUT_SIMUL_F 1200
+
 template<typename T> class t_rt_snd_out_te : public virtual i_rt_base_slbuf_ex<T> {
 
 protected:
     //local properties
     int M;      //refresh rate in number of samples in one row - if known
     int N;      //multibuffer length
+    int fs;  //sampling freq - given vs actual
 
     t_rt_slice<T> row;                     /*! active row in multibuffer */
 
@@ -30,10 +33,16 @@ public:
 
                 double t = smp.t + i/(2*smp.I[i]); //I[x] ~ freq. resol of sample = nyquist fr = fs/2
                 row = (M) ? t_rt_slice<T>(t, M, (T)0) :   //version with fixed known slice size
-                            t_rt_slice<T>(t, smp.A.size(), (T)0);  //auto-slice size (derived from input with respect to decimation)
+                    t_rt_slice<T>(t, smp.A.size(), (T)0);  //auto-slice size (derived from input with respect to decimation)
             }
 
-            row.append(smp.A[i], smp.I[i]); //D can reduce freq. resolution because of change fs
+            T sample = smp.A[i];
+
+#ifdef RT_SND_OUT_SIMUL_F
+            sample = 0.05 * sin(RT_SND_OUT_SIMUL_F * 2*M_PI*(smp.t + i/(2*smp.I[i])));
+#endif //RT_SND_OUT_SIMUL_F
+
+            row.append(sample, smp.I[i]); //D can reduce freq. resolution because of change fs
             if(row.isfull()){  //in auto mode (M == 0) with last sample of input slice
 
                 buf_append(row); //write + send notifications
@@ -65,9 +74,9 @@ public:
         i_rt_base_slbuf_ex<T>(resource),
         row(0, 0)
     {
-        if(false == freq.empty())
-            par.replace("Rate", freq);  //update list - not sure if it is ideal; should be automatic according to input samples
-                    //but ok; user can set fixed (for wav recording for example)
+//        if(false == freq.empty())
+//            par.replace("Rate", freq);  //update list - not sure if it is ideal; should be automatic according to input samples
+//                    //but ok; user can set fixed (for wav recording for example)
 
         change();
 
