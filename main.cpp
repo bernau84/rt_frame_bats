@@ -22,55 +22,49 @@ int main(int argc, char *argv[])
         qDebug() << infos[i].deviceName();
 
     rt_snd_out_qt sndout(QAudioDeviceInfo::defaultOutputDevice());
+    sndout.start();
 
-    if(infos.count()){
+    //rt_snd_in_fp *aidev = new rt_snd_in_fp(); //berem prvni dobrou
+    //rt_cpb_fp *aibat = new rt_cpb_fp(); //navazame na vzorkovac
+    //rt_filter_fp *aifilt = new rt_filter_fp(); //navazame na vzorkovac
+    //rt_w_pwr_fp *ai_w_pwr = new rt_w_pwr_fp(); //navazame na vzorkovac
+    //rt_snd_out_fp *aodev = new rt_snd_out_fp(); //audio output
 
+    //aibat->connection(aidev);
+    //aifilt->connection(aidev);
+    //ai_w_pwr->connection(aidev);
+    //aodev->connection(aidev);
 
-        //sndout.config_proc(8000, 20);
-        //sndout.start();
+    /*
+    double half_band_coe[] = {
+         #include "analysis\filter_half_b_cheby_fir_coe2.h";
+    };
 
-        //rt_snd_in_fp *aidev = new rt_snd_in_fp(); //berem prvni dobrou
-        //rt_cpb_fp *aibat = new rt_cpb_fp(); //navazame na vzorkovac
-        //rt_filter_fp *aifilt = new rt_filter_fp(); //navazame na vzorkovac
-        //rt_w_pwr_fp *ai_w_pwr = new rt_w_pwr_fp(); //navazame na vzorkovac
-        //rt_snd_out_fp *aodev = new rt_snd_out_fp(); //audio output
+    unsigned half_band_coe_N = sizeof(half_band_coe) / sizeof(double);
+    T half_band_coe_T[half_band_coe_N];
+    for(int i=0; i<half_band_coe_N; i++)  half_band_coe_T[i] = T(half_band_coe[i]);
+    */
 
-        //aibat->connection(aidev);
-        //aifilt->connection(aidev);
-        //ai_w_pwr->connection(aidev);
-        //aodev->connection(aidev);
+    /*
+    t_waw_file_reader wiex("c:\\mares\\Audio\\10multi_harm_sin_08.wav", true);
+    t_waw_file_reader wiex("c:\\Users\\bernau84\\Documents\\sandbox\\simulace\\chirp_20_8000_fs16kHz.wav", true);
+    t_waw_file_reader::t_wav_header inf; wiex.info(inf);
 
-        /*
-        double half_band_coe[] = {
-             #include "analysis\filter_half_b_cheby_fir_coe2.h";
-        };
+    t_waw_file_writer woex("c:\\mares\\Audio\\10multi_harm_sin_08_copy.wav", 8000, 1, 8);
 
-        unsigned half_band_coe_N = sizeof(half_band_coe) / sizeof(double);
-        T half_band_coe_T[half_band_coe_N];
-        for(int i=0; i<half_band_coe_N; i++)  half_band_coe_T[i] = T(half_band_coe[i]);
-        */
+    for(int i=0; i<2000; i++){
 
-        /*
-        t_waw_file_reader wiex("c:\\mares\\Audio\\10multi_harm_sin_08.wav", true);
-        t_waw_file_reader wiex("c:\\Users\\bernau84\\Documents\\sandbox\\simulace\\chirp_20_8000_fs16kHz.wav", true);
-        t_waw_file_reader::t_wav_header inf; wiex.info(inf);
-
-        t_waw_file_writer woex("c:\\mares\\Audio\\10multi_harm_sin_08_copy.wav", 8000, 1, 8);
-
-        for(int i=0; i<2000; i++){
-
-            double tmp[300];
-            wiex.read(tmp, 300);
-            woex.write(tmp, 300);
-        }
-        */
-
-        //aibat->start();
-        //aifilt->start();
-        //ai_w_pwr->start();
-        //aodev->start();
-        //aidev->start(); //cele to odstartujem
+        double tmp[300];
+        wiex.read(tmp, 300);
+        woex.write(tmp, 300);
     }
+    */
+
+    //aibat->start();
+    //aifilt->start();
+    //ai_w_pwr->start();
+    //aodev->start();
+    //aidev->start(); //cele to odstartujem
 
     return a.exec();
 }

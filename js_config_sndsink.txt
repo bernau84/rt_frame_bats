@@ -11,7 +11,7 @@
         "__min": 1
     },
     "Slice": {
-        "__info": "size of X buffer (length of time slices)",
+        "__info": "size of X buffer (length of time slices i number of samples)",
         "auto(0)": 0,
         "small(10)": 10,
         "wide(100)": 100,
@@ -33,5 +33,10 @@
         "100x": 0.0625,
         "__def": 0.125,
         "__min": 0.001
+    },
+    "__auto_slicesize": {
+        "__info": "value given by output sound device",
+        "__min": 1,
+        "__def": 128
     }
 }

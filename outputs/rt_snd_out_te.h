@@ -64,9 +64,11 @@ public:
          */
 
         N = par["Multibuffer"].get().toDouble(); //slice number
-        M = par["Slice"].get().toDouble();  //[Hz] * refresh rate [s] = slice point
-
         buf_resize(N);
+
+        if((M = par["Slice"].get().toDouble()) == 0)  //slice points
+            if((M = par["__auto_slicesize"].get().toDouble()) == 0)  //auto - read value from sound card
+                M = 128;
     }
 
     t_rt_snd_out_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsink.txt")):
@@ -74,9 +76,9 @@ public:
         i_rt_base_slbuf_ex<T>(resource),
         row(0, 0)
     {
-//        if(false == freq.empty())
-//            par.replace("Rate", freq);  //update list - not sure if it is ideal; should be automatic according to input samples
-//                    //but ok; user can set fixed (for wav recording for example)
+        if(false == freq.empty())
+            par.replace("Rate", freq);  //update list - not sure if it is ideal; should be automatic according to input samples
+                    //but ok; user can set fixed (for wav recording for example)
 
         change();
 

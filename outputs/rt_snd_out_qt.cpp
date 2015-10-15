@@ -4,7 +4,7 @@
 //override rt_node start
 void rt_snd_out_qt::start(){
 
-    //rt_node::start();
+    rt_node::start();
 
     output_io = output_audio->start();
     return;
@@ -35,7 +35,7 @@ void rt_snd_out_qt::start(){
 //override rt_node stop
 void rt_snd_out_qt::stop(){
 
-    //rt_node::stop();
+    rt_node::stop();
 
     if(!output_audio)
         return;
@@ -82,8 +82,8 @@ void rt_snd_out_qt::error(void){
 
 void rt_snd_out_qt::notify_proc(){
 
-//    if(state != Active)
-//        return;
+    if(state != Active)
+        return;
 
     if(!output_io || !output_audio)
         return;
@@ -98,35 +98,56 @@ void rt_snd_out_qt::notify_proc(){
         scale /= 2.0; offs = 0.0;
     }
 
-    int bs = output_audio->bufferSize();
-    int ps = output_audio->periodSize();  /*! \todo size of bytes block for feed io */
-    int bf = output_audio->bytesFree();
+    int avaiable_l = 0;
+    int writable_l = output_audio->bytesFree() / (format.sampleSize() / 8);
+    int cycles_n = output_audio->bytesFree() / output_audio->periodSize();
 
-    qDebug() << QString::number(bs) << " / " << QString::number(ps) << " / " << QString::number(bf);
-
-    qint64 avaiable_l = 0, writable_l = output_audio->bytesFree() / (format.sampleSize() / 8);
     short local_samples[writable_l];  //vycteni dostupneho
 
-    //t_rt_slice<double> *out;
-    //while(NULL != (out = (t_rt_slice<double> *)base->read())) //reader 0 is reserved for internal usage in this case - see constructor
-    //    for(unsigned i=0; i<out->A.size(); i++)
-    //if(avaiable_l < writable_l)  //data over are discarded
-    //    local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
 
-    for(unsigned i=0; i<writable_l; i++)
-        local_samples[avaiable_l++] = 0.05 * sin(1500 * (2*M_PI*i)/format.sampleRate()); //(out->A[i] + offs) * scale;
+    t_rt_slice<double> *out;
+    for(int c = 0; c<cycles_n; c++){
+
+        if(M < writable_l)  //need less than one slice
+            break;
+
+        if(NULL == (out = (t_rt_slice<double> *)base->read())) //reader 0 is reserved for internal usage in this case - see constructor
+            break;  //input is empty
+
+        /*! \todo
+         * do not support interpolation & decimation
+         * do not support frequency detection on sample basis - only fist from slice is checked */
+        if((FSin = 2*out->I[0]) != FSout)
+            if(FScust == 0)  //automatic re-set
+                config_proc();      //reconfigure before feed
+
+        for(unsigned i=0; i<out->A.size(); i++)
+            if(avaiable_l < writable_l)  //data over are discarded
+                local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
+
+    }
 
     if(avaiable_l)
         output_io->write((char *)local_samples, avaiable_l);
 }
 
-void rt_snd_out_qt::config_proc(int sampling_rate, int refresh_rate){
+void rt_snd_out_qt::config_proc(){
 
     if(output_audio)
         delete output_audio;
 
-    //pevne
-    format.setSampleRate(sampling_rate);
+    FScust = base->setup("Rate").toInt();
+    FSout = (!FScust) ? FSin : FScust;  //automatic according to input samples
+
+    if(0 == (M = base->setup("Slice").toInt())){ //auto?
+
+        M = output_audio->periodSize(); //automatic accroding to sampler->periodSize()
+        base->setup("__auto_slicesize", M);  //provide value to underlaying worker / buffer
+    }
+
+    format.setSampleRate(FSout);
+
+    //fixed
     format.setChannelCount(1);
     format.setSampleSize(16);
     format.setCodec("audio/pcm");
@@ -145,15 +166,11 @@ void rt_snd_out_qt::config_proc(int sampling_rate, int refresh_rate){
         return; //tak to neklaplo - takovy format nemame
     }
 
-    output_audio->setNotifyInterval(20/*refresh_rate*/);  //navic mame to od byteready
-    connect(output_audio, SIGNAL(notify()), this, SLOT(notify_proc()));
-    //connect(output_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
-}
+    int RR = 1000 * base->setup("__refresh_rate").toDouble();
+    output_audio->setNotifyInterval(RR);  //navic mame to od byteready
 
-void rt_snd_out_qt::timerEvent(QTimerEvent *event)
-{
-    //notify_proc();
-    qDebug() << "notif!";
+    connect(output_audio, SIGNAL(notify()), this, SLOT(notify_proc()));
+    connect(output_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
 }
 
 
