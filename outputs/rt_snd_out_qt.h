@@ -10,7 +10,7 @@
 
 /*! \brief final assembly of rt_node and template of soundcard in
  * floating point version */
-class rt_snd_out_qt : public rt_node {
+class rt_snd_out_fp : public rt_node {
 
     Q_OBJECT
 
@@ -66,7 +66,7 @@ protected slots:
 //    }
 
 public:
-    rt_snd_out_qt(const QAudioDeviceInfo out = QAudioDeviceInfo::defaultOutputDevice(), QObject *parent = NULL):
+    rt_snd_out_fp(const QAudioDeviceInfo out = QAudioDeviceInfo::defaultOutputDevice(), QObject *parent = NULL):
         rt_node(parent),
         output_dev(out),
         worker(__helper_fs_list(out))
@@ -78,7 +78,7 @@ public:
         on_change();
     }
 
-    virtual ~rt_snd_out_qt(){
+    virtual ~rt_snd_out_fp(){
         //empty
     }
 };

@@ -8,6 +8,7 @@
 #include "analysis\rt_filter_qt.h"
 #include "analysis\rt_w_pwr_qt.h"
 #include "inputs\rt_snd_in_qt.h"
+#include "inputs\rt_wav_in_qt.h"
 #include "outputs\rt_snd_out_qt.h"
 
 #include "inputs\wav_read_file.h"
@@ -21,7 +22,9 @@ int main(int argc, char *argv[])
     for(int i=0; i<infos.count(); i++)
         qDebug() << infos[i].deviceName();
 
-    rt_snd_out_qt sndout(QAudioDeviceInfo::defaultOutputDevice());
+    rt_snd_out_fp sndout(QAudioDeviceInfo::defaultOutputDevice());
+    rt_wav_in_fp wavin("c:\\mares\\Audio\\10multi_harm_sin_08.wav");
+
     sndout.start();
 
     //rt_snd_in_fp *aidev = new rt_snd_in_fp(); //berem prvni dobrou

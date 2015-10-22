@@ -2,7 +2,7 @@
 #include "rt_snd_out_qt.h"
 
 //override rt_node start
-void rt_snd_out_qt::start(){
+void rt_snd_out_fp::start(){
 
     rt_node::start();
 
@@ -33,7 +33,7 @@ void rt_snd_out_qt::start(){
 }
 
 //override rt_node stop
-void rt_snd_out_qt::stop(){
+void rt_snd_out_fp::stop(){
 
     rt_node::stop();
 
@@ -55,13 +55,13 @@ void rt_snd_out_qt::stop(){
 }
 
 
-void rt_snd_out_qt::statechanged(QAudio::State act){
+void rt_snd_out_fp::statechanged(QAudio::State act){
 
     error();
     Q_UNUSED(act);
 }
 
-void rt_snd_out_qt::error(void){
+void rt_snd_out_fp::error(void){
 
     if(!output_audio) //bylo uz zinicializovano
         return;
@@ -80,7 +80,7 @@ void rt_snd_out_qt::error(void){
     }
 }
 
-void rt_snd_out_qt::notify_proc(){
+void rt_snd_out_fp::notify_proc(){
 
     if(state != Active)
         return;
@@ -131,7 +131,7 @@ void rt_snd_out_qt::notify_proc(){
         output_io->write((char *)local_samples, avaiable_l);
 }
 
-void rt_snd_out_qt::config_proc(){
+void rt_snd_out_fp::config_proc(){
 
     if(output_audio)
         delete output_audio;

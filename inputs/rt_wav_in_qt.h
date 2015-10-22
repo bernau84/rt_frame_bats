@@ -18,10 +18,16 @@ protected:
     t_rt_snd_in_te<double> worker;
     t_waw_file_reader *file;
 
-    t_setup_entry __helper_fs_list(QList<int> qfrl = QList<int>()){
+    t_setup_entry __helper_fs_read(QString filepath){
 
-        QJsonArray jfrl;  //conversion
-        foreach(int f, qfrl) jfrl.append(f);
+        QJsonArray jfrl;
+
+        file = (t_waw_file_reader *) new t_waw_file_reader(filepath.toLatin1().data(), true);
+        t_waw_file_reader::t_wav_header head;
+
+        if(file && file->info(head))
+            jfrl.append(QJsonValue((int)head.sample_frequency));
+
         return t_setup_entry(jfrl, "Hz");  //recent list
     }
 
@@ -44,8 +50,8 @@ protected slots:
         if(state != Active)
             return;
 
-        int T = worker.setup("Time");
-        int FS = worker.setup("Rates");
+        int T = worker.setup("__refresh_rate").toInt();
+        int FS = worker.setup("Rates").toInt();
 
         double tmp[T*FS];
         int N = file->read(tmp, T*FS);
@@ -56,25 +62,27 @@ protected slots:
 
     virtual void on_change(){ //override change slot
 
-        worker->on_change();
-        int T = worker.setup("Time");
+        worker.on_change();
+        int T = worker.setup("__refresh_rate").toInt();
         tick.setInterval(1000 * T);
         emit signal_update(this);
     }
 
 public:
-    rt_wav_in_fp(QObject *parent = NULL):
+    rt_wav_in_fp(QString filepath, QObject *parent = NULL):
         rt_node(parent),
         tick(this),
-        worker(__helper_fs_list)
+        worker(__helper_fs_read(filepath))
     {
         init(&worker);
-        connect(tick, SIGNAL(timeout), this, SLOT(notify_proc()));
+        QObject::connect(&tick, SIGNAL(timeout), this, SLOT(notify_proc()));
         on_change();
     }
 
-    virtual ~rt_snd_in_fp(){
-        //empty
+    virtual ~rt_wav_in_fp(){
+
+        if(file)
+            delete file;
     }
 };
 

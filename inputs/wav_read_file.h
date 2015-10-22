@@ -47,7 +47,7 @@ public:
       */
      int info(t_waw_file_reader::t_wav_header &head){
 
-         head = header;
+        head = header;
         return header.num_channels;
      }
 
