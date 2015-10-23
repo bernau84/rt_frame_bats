@@ -6,9 +6,6 @@ void rt_snd_out_fp::start(){
 
     rt_node::start();
 
-    output_io = output_audio->start();
-    return;
-
     if(!output_audio)
         return;
 
@@ -108,8 +105,8 @@ void rt_snd_out_fp::notify_proc(){
     t_rt_slice<double> *out;
     for(int c = 0; c<cycles_n; c++){
 
-        if(M < writable_l)  //need less than one slice
-            break;
+//        if(M < writable_l)  //need less than one slice
+//            break;
 
         if(NULL == (out = (t_rt_slice<double> *)base->read())) //reader 0 is reserved for internal usage in this case - see constructor
             break;  //input is empty
@@ -139,15 +136,7 @@ void rt_snd_out_fp::config_proc(){
     FScust = base->setup("Rate").toInt();
     FSout = (!FScust) ? FSin : FScust;  //automatic according to input samples
 
-    if(0 == (M = base->setup("Slice").toInt())){ //auto?
-
-        M = output_audio->periodSize(); //automatic accroding to sampler->periodSize()
-        base->setup("__auto_slicesize", M);  //provide value to underlaying worker / buffer
-    }
-
     format.setSampleRate(FSout);
-
-    //fixed
     format.setChannelCount(1);
     format.setSampleSize(16);
     format.setCodec("audio/pcm");
@@ -164,6 +153,12 @@ void rt_snd_out_fp::config_proc(){
 
         qWarning() << this->objectName() << ", error!";
         return; //tak to neklaplo - takovy format nemame
+    }
+
+    if(0 == (M = base->setup("Slice").toInt())){ //auto?
+
+        M = output_audio->periodSize(); //automatic accroding to sampler->periodSize()
+        base->setup("__auto_slicesize", M);  //provide value to underlaying worker / buffer
     }
 
     int RR = 1000 * base->setup("__refresh_rate").toDouble();

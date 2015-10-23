@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
         qDebug() << infos[i].deviceName();
 
     rt_snd_out_fp sndout(QAudioDeviceInfo::defaultOutputDevice());
-    rt_wav_in_fp wavin("c:\\mares\\Audio\\10multi_harm_sin_08.wav");
+    //rt_wav_in_fp wavin("c:\\mares\\Audio\\10multi_harm_sin_08.wav");
 
     sndout.start();
 
