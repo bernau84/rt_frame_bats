@@ -9,5 +9,11 @@
         <file>js_config_pwr_meas.txt</file>
         <file>js_config_w_pwr_filter.txt</file>
         <file>js_config_w_pwr_calc.txt</file>
+        <file>js_config_wavsource.txt</file>
+    </qresource>
+    <qresource prefix="/testsig">
+        <file>1khz_test.wav</file>
+        <file>dtmf_test.wav</file>
+        <file>ramp_test.wav</file>
     </qresource>
 </RCC>

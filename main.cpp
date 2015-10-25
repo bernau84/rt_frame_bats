@@ -22,10 +22,12 @@ int main(int argc, char *argv[])
     for(int i=0; i<infos.count(); i++)
         qDebug() << infos[i].deviceName();
 
-    rt_snd_out_fp sndout(QAudioDeviceInfo::defaultOutputDevice());
-    //rt_wav_in_fp wavin("c:\\mares\\Audio\\10multi_harm_sin_08.wav");
+    //rt_snd_out_fp sndout(QAudioDeviceInfo::defaultOutputDevice());
+    rt_wav_in_fp wavin;
 
-    sndout.start();
+    //sndout.start();
+    wavin.start();
+
 
     //rt_snd_in_fp *aidev = new rt_snd_in_fp(); //berem prvni dobrou
     //rt_cpb_fp *aibat = new rt_cpb_fp(); //navazame na vzorkovac

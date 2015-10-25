@@ -6,7 +6,7 @@
 
 #include "base\rt_base_slbuf_ex.h"
 
-#define RT_SND_OUT_SIMUL_F 1200
+//#define RT_SND_OUT_SIMUL_F 1200
 
 template<typename T> class t_rt_snd_out_te : public virtual i_rt_base_slbuf_ex<T> {
 

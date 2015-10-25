@@ -59,16 +59,21 @@ public:
 
         //optionaly
         row = t_rt_slice<T>(nproc/fs, M, (T)0);  //recent slice reset
-        //nproc = 0;
 
         signal(RT_SIG_SOURCE_UPDATED, "something"); //inform sucessor and may be the sampler as well
+    }
+
+    void renew_frequencies(const t_setup_entry &freq){
+
+        if(freq.isEmpty() == false)
+            par.replace("Rates", freq);  //update list
     }
 
     t_rt_snd_in_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsource.txt")):
         i_rt_base(resource, RT_QUEUED),
         buf(NULL)
     {
-        par.replace("Rates", freq);  //update list
+        renew_frequencies(freq);
         nproc = 0;
         change();
     }

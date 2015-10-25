@@ -22,7 +22,9 @@
         "__info": "avaiable/fixed sampling frequencies (auto - controled by freq. of samples)",
         "auto": 0,
         "8kHz": 8000,
-        "__def": 8000
+        "__def": 8000,
+        "__min": 1,
+        "__max": 1000000
     },
     "__refresh_rate": {
         "__info": "inner rate of refresh multibuffer per time resolution",

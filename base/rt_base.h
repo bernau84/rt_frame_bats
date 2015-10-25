@@ -211,6 +211,7 @@ public:
     /*! \brief batch collection update from json string
      */
     void import(const QString &json_config){
+
         Q_UNUSED(json_config);
         /*! \todo
          */

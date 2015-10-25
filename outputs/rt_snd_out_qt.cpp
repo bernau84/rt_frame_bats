@@ -97,31 +97,34 @@ void rt_snd_out_fp::notify_proc(){
 
     int avaiable_l = 0;
     int writable_l = output_audio->bytesFree() / (format.sampleSize() / 8);
-    int cycles_n = output_audio->bytesFree() / output_audio->periodSize();
+
+    /*! io by se melo plnit po blocich velikosti writeble_l (viz example)
+     * coz bude fungovat pokud mame nastavenu automatiku a stejnou velikost ma slice
+     * int cycles_n = output_audio->bytesFree() / output_audio->periodSize();
+     *
+     * pokud by se k-v bufferu kupili data, spolehame na overflow mechanizmus ve zdroji
+     * pokud data stacit nebudou bude to holt skubat - nebo to muzem necim vypodlozit - warning tone
+     */
 
     short local_samples[writable_l];  //vycteni dostupneho
 
-
     t_rt_slice<double> *out;
-    for(int c = 0; c<cycles_n; c++){
-
-//        if(M < writable_l)  //need less than one slice
-//            break;
-
-        if(NULL == (out = (t_rt_slice<double> *)base->read())) //reader 0 is reserved for internal usage in this case - see constructor
-            break;  //input is empty
+    while(NULL == (out = (t_rt_slice<double> *)base->read())){ //reader 0 is reserved for internal usage in this case - see constructor)
 
         /*! \todo
          * do not support interpolation & decimation
-         * do not support frequency detection on sample basis - only fist from slice is checked */
+         * do not support frequency detection on sample basis - only first from slice is checked
+         */
+
         if((FSin = 2*out->I[0]) != FSout)
             if(FScust == 0)  //automatic re-set
                 config_proc();      //reconfigure before feed
 
         for(unsigned i=0; i<out->A.size(); i++)
-            if(avaiable_l < writable_l)  //data over are discarded
-                local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
+            local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
 
+        if(M > (writable_l - avaiable_l))  //dalsi slice uz by se nevesel
+            break;
     }
 
     if(avaiable_l)

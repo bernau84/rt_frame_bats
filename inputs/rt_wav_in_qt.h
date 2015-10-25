@@ -17,19 +17,7 @@ protected:
     QTimer tick;
     t_rt_snd_in_te<double> worker;
     t_waw_file_reader *file;
-
-    t_setup_entry __helper_fs_read(QString filepath){
-
-        QJsonArray jfrl;
-
-        file = (t_waw_file_reader *) new t_waw_file_reader(filepath.toLatin1().data(), true);
-        t_waw_file_reader::t_wav_header head;
-
-        if(file && file->info(head))
-            jfrl.append(QJsonValue((int)head.sample_frequency));
-
-        return t_setup_entry(jfrl, "Hz");  //recent list
-    }
+    int RN;   //number of samples in refres periode
 
 public slots:
 
@@ -50,32 +38,66 @@ protected slots:
         if(state != Active)
             return;
 
-        int T = worker.setup("__refresh_rate").toInt();
-        int FS = worker.setup("Rates").toInt();
-
-        double tmp[T*FS];
-        int N = file->read(tmp, T*FS);
+        double tmp[RN];
+        int N = file->read(tmp, RN);
 
         for(int n=0; n<N; n++)
             rt_node::on_update(&tmp[n]); //sample by sample - if row is full, signal is fired
     }
 
-    virtual void on_change(){ //override change slot
+    virtual void on_change() //override change slot
+    {
+        QString filepath = worker.setup("File").toString();
+        t_waw_file_reader::t_wav_header head;
+        file = (t_waw_file_reader *) new t_waw_file_reader(filepath.toLatin1().data(),
+                                                              worker.setup("Loop").toBool());
 
-        worker.on_change();
-        int T = worker.setup("__refresh_rate").toInt();
-        tick.setInterval(1000 * T);
-        emit signal_update(this);
+        //file = (t_waw_file_reader *) new t_waw_file_reader("c:\\Users\\bernau84\\Documents\\sandbox\\rt_frame_git\\ramp_test.wav", true);
+
+        //file = (t_waw_file_reader *) new t_waw_file_reader("c:\\Users\\bernau84\\Documents\\sandbox\\simulace\\chirp_20_8000_fs16kHz.wav", true);
+
+        if(file && file->info(head)){
+
+            int fr_backup = worker.setup("Rates").toInt();
+            int fr_recent = head.sample_frequency;
+
+            t_setup_entry fr_offer; //new set of freq. - begin from empty
+            //standard set
+            fr_offer.set("min", 1, t_setup_entry::MIN);
+            fr_offer.set("auto", 0, t_setup_entry::DEF);
+            //recent and previous
+            fr_offer.set(QString("%1Hz").arg(fr_recent), fr_recent);
+            if(fr_backup == 0) fr_offer.sel("auto");   //keeps auto
+             else fr_offer.set(QString("%1Hz").arg(fr_backup), fr_backup, t_setup_entry::VAL);  //keeps prev
+
+            worker.renew_frequencies(fr_offer);
+            worker.setup("__auto_freq", fr_recent);  //important for auto mode
+        } else {
+
+            if(!file) qDebug() << filepath << "audio file not found!";
+                else qDebug() << filepath << "audio file corrupted / unsupported!";
+        }
+
+        rt_node::on_change();
+
+        double T = 1000 * worker.setup("__refresh_rate").toDouble();
+        tick.setInterval(T);
+
+        int FS = worker.setup("Rates").toInt();
+        if(FS == 0) FS = worker.setup("__auto_freq").toInt();  //auto mode - fs pick from wav directly
+
+        RN = FS * (T / 1000.0);
     }
 
 public:
-    rt_wav_in_fp(QString filepath, QObject *parent = NULL):
+    rt_wav_in_fp(const QDir &resource = QDir(":/config/js_config_wavsource.txt"),
+                 QObject *parent = NULL):
         rt_node(parent),
         tick(this),
-        worker(__helper_fs_read(filepath))
+        worker(t_setup_entry(), resource)
     {
         init(&worker);
-        QObject::connect(&tick, SIGNAL(timeout), this, SLOT(notify_proc()));
+        QObject::connect(&tick, SIGNAL(timeout()), this, SLOT(notify_proc()));
         on_change();
     }
 

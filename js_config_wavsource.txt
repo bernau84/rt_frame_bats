@@ -1,10 +1,9 @@
-
 {
     "File": {
         "__info": "source audio file",
         "single": "*.wav",
         "multiple": "pattern%d.wav",
-        "__def": ""
+        "__def": "qrc:/testsig/ramp_test.wav"
     },
     "Channel": {
         "__info": "source audio file",
@@ -15,9 +14,9 @@
     },
     "Loop": {
         "__info": "play file repeatedly",
-        "true": "true",
-        "false": "false",
-        "__def": "true"
+        "true": true,
+        "false": false,
+        "__def": true
     },
     "Multibuffer": {
         "__info": "size of Z buffer (number of slices)",
@@ -44,7 +43,10 @@
     "Rate": {
         "__info": "avaiable sampling frequencies",
         "8kHz": 8000,
-        "__def": 8000
+        "auto": 0,
+        "__def": 0,
+        "__min": 1,
+        "__max": 1000000
     },
     "__refresh_rate": {
         "__info": "inner rate of refresh multibuffer per time resolution",
@@ -55,5 +57,10 @@
         "100x": 0.0625,
         "__def": 0.125,
         "__min": 0.001
+    },
+    "__auto_freq": {
+        "__info": "value given by wav file",
+        "__min": 1,
+        "__def": 8000
     }
 }

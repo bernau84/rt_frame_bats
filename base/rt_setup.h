@@ -129,11 +129,11 @@ public:
         return get();
     }
 
-    /*! \brief add new predefined value and select it*/
-    QJsonValue set(const QString &name, const QJsonValue &val, t_restype t = DEF){
+    /*! \brief add new predefined/extra value and select it*/
+    QJsonValue set(const QString &name, const QJsonValue &val, t_restype f = ANY){
 
         QJsonObject::insert(name, val);
-        insert(t, val);
+        insert(f, val);
         return sel(name);
     }
 
