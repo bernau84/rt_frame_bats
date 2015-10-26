@@ -6,6 +6,7 @@
 #include "rt_snd_in_te.h"
 #include "wav_read_file.h"
 #include <QTimer>
+#include <QTemporaryFile>
 
 /*! \brief final assembly of rt_node and template of soundcard input
  * floating point version*/
@@ -15,6 +16,8 @@ class rt_wav_in_fp : public rt_node {
 
 protected:
     QTimer tick;
+    QTemporaryFile *tmpf;
+
     t_rt_snd_in_te<double> worker;
     t_waw_file_reader *file;
     int RN;   //number of samples in refres periode
@@ -49,6 +52,13 @@ protected slots:
     {
         QString filepath = worker.setup("File").toString();
         t_waw_file_reader::t_wav_header head;
+
+       if(file) delete file;
+       if(tmpf) delete tmpf;
+
+       if(NULL != (tmpf = QTemporaryFile::createNativeFile(filepath))) //if file is from resource, temp copy is created
+           filepath = tmpf->fileName();
+
         file = (t_waw_file_reader *) new t_waw_file_reader(filepath.toLatin1().data(),
                                                               worker.setup("Loop").toBool());
 
@@ -96,6 +106,9 @@ public:
         tick(this),
         worker(t_setup_entry(), resource)
     {
+        file = NULL;
+        tmpf = NULL;
+
         init(&worker);
         QObject::connect(&tick, SIGNAL(timeout()), this, SLOT(notify_proc()));
         on_change();
@@ -103,8 +116,8 @@ public:
 
     virtual ~rt_wav_in_fp(){
 
-        if(file)
-            delete file;
+        if(file) delete file;
+        if(tmpf) delete tmpf;
     }
 };
 

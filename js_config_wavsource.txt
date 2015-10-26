@@ -3,7 +3,7 @@
         "__info": "source audio file",
         "single": "*.wav",
         "multiple": "pattern%d.wav",
-        "__def": "qrc:/testsig/ramp_test.wav"
+        "__def": ":/testsig/ramp_test.wav"
     },
     "Channel": {
         "__info": "source audio file",
