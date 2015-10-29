@@ -22,10 +22,12 @@ int main(int argc, char *argv[])
     for(int i=0; i<infos.count(); i++)
         qDebug() << infos[i].deviceName();
 
-    //rt_snd_out_fp sndout(QAudioDeviceInfo::defaultOutputDevice());
+    rt_snd_out_fp sndout(QAudioDeviceInfo::defaultOutputDevice());
     rt_wav_in_fp wavin;
 
-    //sndout.start();
+    sndout.connection(&wavin);
+
+    sndout.start();
     wavin.start();
 
 

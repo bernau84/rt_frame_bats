@@ -42,6 +42,13 @@ private slots:
     void statechanged(QAudio::State act);
     void error(void);
 
+    void timerEvent(QTimerEvent *event)
+    {
+        qDebug() << "Timer!";
+        event = event;
+        notify_proc();
+    }
+
 public slots:
     void start();   //override rt_node start
     void stop();    //override rt_node stop

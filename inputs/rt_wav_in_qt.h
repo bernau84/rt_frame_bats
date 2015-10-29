@@ -80,8 +80,8 @@ protected slots:
             if(fr_backup == 0) fr_offer.sel("auto");   //keeps auto
              else fr_offer.set(QString("%1Hz").arg(fr_backup), fr_backup, t_setup_entry::VAL);  //keeps prev
 
-            worker.renew_frequencies(fr_offer);
             worker.setup("__auto_freq", fr_recent);  //important for auto mode
+            worker.renew_frequencies(fr_offer);
         } else {
 
             if(!file) qDebug() << filepath << "audio file not found!";

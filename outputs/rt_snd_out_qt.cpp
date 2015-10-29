@@ -95,6 +95,8 @@ void rt_snd_out_fp::notify_proc(){
         scale /= 2.0; offs = 0.0;
     }
 
+    qDebug() << "Tick!";
+
     int avaiable_l = 0;
     int writable_l = output_audio->bytesFree() / (format.sampleSize() / 8);
 
@@ -109,7 +111,7 @@ void rt_snd_out_fp::notify_proc(){
     short local_samples[writable_l];  //vycteni dostupneho
 
     t_rt_slice<double> *out;
-    while(NULL == (out = (t_rt_slice<double> *)base->read())){ //reader 0 is reserved for internal usage in this case - see constructor)
+    while(NULL != (out = (t_rt_slice<double> *)base->read())){ //reader 0 is reserved for internal usage in this case - see constructor)
 
         /*! \todo
          * do not support interpolation & decimation
@@ -166,6 +168,8 @@ void rt_snd_out_fp::config_proc(){
 
     int RR = 1000 * base->setup("__refresh_rate").toDouble();
     output_audio->setNotifyInterval(RR);  //navic mame to od byteready
+
+    this->startTimer(RR);
 
     connect(output_audio, SIGNAL(notify()), this, SLOT(notify_proc()));
     connect(output_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));

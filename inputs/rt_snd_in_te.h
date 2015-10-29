@@ -31,6 +31,9 @@ public:
         if(!buf || !sample)
             return;
 
+        if(row.A.size() == 0)
+            row = t_rt_slice<T>(nproc / fs, M, (T)0);   //version with fixed known slice size
+
 #ifdef RT_SND_IN_SIMUL_F
         T dbg = 0.05 * sin(RT_SND_IN_SIMUL_F * (2*M_PI*nproc) / fs);
         //T dbg = nproc;
@@ -43,14 +46,16 @@ public:
         if(row.isfull()){
 
             signal(RT_SIG_SOURCE_UPDATED, buf->write(&row)); //write & signal with global pointer inside buffer
-            row = t_rt_slice<T>(nproc / fs, M, (T)0); //and prepare new with current timestamp
+            row.A.clear(); //force new row initializacion
         }
     }
 
     /*! \brief reinit buffers and local properties according to actual setting */
     virtual void change(){
 
-        fs = par["Rate"].get().toDouble();  //actual frequency
+        fs = par["Rates"].get().toInt();
+        if(fs == 0) fs = par["__auto_freq"].get().toInt();  //auto mode - fs pick from wav directly
+
         N = par["Multibuffer"].get().toDouble(); //slice number
         M = fs * par["Time"].get().toDouble();  //[Hz] * refresh rate [s] = slice point
 
