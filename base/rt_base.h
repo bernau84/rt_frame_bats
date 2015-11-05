@@ -179,17 +179,16 @@ public:
     /*! \brief setup collection io, read for empty/default v
      * \todo - template instead of QVariant and std::string for QString
      */
-    QVariant setup(const QString &name, QVariant v = QVariant()){
+    QJsonValue setup(const QString &name, QJsonValue v = QJsonValue()){
 
         t_setup_entry val;
         if(0 == par.ask(name, &val))  //get the config item first
-            return QVariant(); //parametr of name do not exists
+            return QJsonValue(); //parametr of name do not exists
 
-        if(v.isValid()){
+        if((v.isNull() == false) && (v.isUndefined() == false)){
 
-            val.set(v.toJsonValue());  //update actual value (with all restriction applied)
+            val.set(v);  //update actual value (with all restriction applied)
             par.replace(name, val); //writeback
-
             on_change();
 
             /* we may fire signal instantly or let change() to to that - prefered because

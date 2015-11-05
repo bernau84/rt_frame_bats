@@ -68,7 +68,7 @@ public:
 
         if((M = par["Slice"].get().toDouble()) == 0)  //slice points
             if((M = par["__auto_slicesize"].get().toDouble()) == 0)  //auto - read value from sound card
-                M = 128;
+                M = 128; //emergency value
     }
 
     t_rt_snd_out_te(const t_setup_entry &freq, const QDir &resource = QDir(":/config/js_config_sndsink.txt")):

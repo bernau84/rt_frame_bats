@@ -1,5 +1,9 @@
 #include <QtDebug>
 #include "rt_snd_out_qt.h"
+#include <typeinfo>
+#include <math.h>
+
+#define RT_SND_OUT_PRELOAD_F 700
 
 //override rt_node start
 void rt_snd_out_fp::start(){
@@ -63,18 +67,26 @@ void rt_snd_out_fp::error(void){
     if(!output_audio) //bylo uz zinicializovano
         return;
 
+    const char *errs = "NoError";
     switch(output_audio->error()){
 
         case QAudio::NoError:       //No errors have occurred
-        break;
+        return;
         case QAudio::OpenError:	//An error opening the audio device
+            errs = "Open";
+        break;
         case QAudio::IOError:	//An error occurred during read/write of audio device
+            errs = "IO";
+        break;
         case QAudio::UnderrunError:	//Audio data is not being fed to the audio device at a fast enough rate
+            errs = "Underrun";
+        break;
         case QAudio::FatalError:	//A non-recoverable error has occurred, the audio device is not usable at this time.
-
-            qDebug() << this->objectName() << ", error!";
-            return;
+            errs = "Fatal";
+        break;
     }
+
+    qDebug() << typeid(this).name() << "error:" << errs ;
 }
 
 void rt_snd_out_fp::notify_proc(){
@@ -85,20 +97,27 @@ void rt_snd_out_fp::notify_proc(){
     if(!output_io || !output_audio)
         return;
 
-    //sampleType unsigned
-    double scale = (1 << format.sampleSize()) / 2;  //<0, 2.0>
-    double offs = +1.0; //<-1.0, 1.0>
+    int avaiable_l = 0;
+    int writable_l = output_audio->bytesFree();
 
-    //sampleType signed
-    if(format.sampleType() == QAudioFormat::SignedInt){
+    uint16_t raw_l[writable_l / 2]; //na vycteni dostupneho
+    writable_l /= (format.sampleSize() / 8);
 
-        scale /= 2.0; offs = 0.0;
+    uint8_t *local_u8_samples = (uint8_t *)raw_l;
+    short *local_s16_samples = (short *)raw_l;
+
+#if RT_SND_OUT_PRELOAD_F > 0
+    for(int i=0; i<writable_l; i++){
+
+        double v = 0.25 * sin((2*M_PI*RT_SND_OUT_PRELOAD_F*i)/format.sampleRate());
+        if(format.sampleType() == QAudioFormat::SignedInt) local_s16_samples[i] = v*32768;
+        else if(format.sampleType() == QAudioFormat::UnSignedInt) local_u8_samples[i] = v*127 + 128;
+        else local_u8_samples[i] = local_s16_samples[i] = 0;
     }
 
-    qDebug() << "Tick!";
+#endif //RT_SND_OUT_PRELOAD_F > 0
 
-    int avaiable_l = 0;
-    int writable_l = output_audio->bytesFree() / (format.sampleSize() / 8);
+    qDebug() << typeid(this).name() << "trace: " << "notify_proc()";
 
     /*! io by se melo plnit po blocich velikosti writeble_l (viz example)
      * coz bude fungovat pokud mame nastavenu automatiku a stejnou velikost ma slice
@@ -108,29 +127,43 @@ void rt_snd_out_fp::notify_proc(){
      * pokud data stacit nebudou bude to holt skubat - nebo to muzem necim vypodlozit - warning tone
      */
 
-    short local_samples[writable_l];  //vycteni dostupneho
 
-    t_rt_slice<double> *out;
-    while(NULL != (out = (t_rt_slice<double> *)base->read())){ //reader 0 is reserved for internal usage in this case - see constructor)
+//    if(writable_l < M)
+//            return;
 
-        /*! \todo
-         * do not support interpolation & decimation
-         * do not support frequency detection on sample basis - only first from slice is checked
-         */
+//    t_rt_slice<double> *out;
+//    while(NULL != (out = (t_rt_slice<double> *)base->read())){ //reader 0 is reserved for internal usage in this case - see constructor)
 
-        if((FSin = 2*out->I[0]) != FSout)
-            if(FScust == 0)  //automatic re-set
-                config_proc();      //reconfigure before feed
+//        /*! \todo
+//         * do not support interpolation & decimation
+//         * do not support frequency detection on sample basis - only first from slice is checked
+//         */
 
-        for(unsigned i=0; i<out->A.size(); i++)
-            local_samples[avaiable_l++] = (out->A[i] + offs) * scale;
+//        if((FSin = 2*out->I[0]) != FSout)
+//            if(FScust == 0)  //automatic re-set
+//                config_proc();      //reconfigure before feed
 
-        if(M > (writable_l - avaiable_l))  //dalsi slice uz by se nevesel
-            break;
+//        if(format.sampleType() == QAudioFormat::UnSignedInt)
+//            for(unsigned i=0; i<out->A.size(); i++)
+//                local_s16_samples[avaiable_l++] = out->A[i]*127 + 128;
+
+//        if(format.sampleType() == QAudioFormat::SignedInt)
+//            for(unsigned i=0; i<out->A.size(); i++)
+//                local_u8_samples[avaiable_l++] = out->A[i]*32768;
+
+//        if(M > (writable_l - avaiable_l))  //dalsi slice uz by se nevesel
+//           break;
+//    }
+
+    //debug bypass
+    avaiable_l = writable_l;
+
+    qDebug() << typeid(this).name() << "trace: " << "required " << writable_l << " / avaiable " << avaiable_l;
+
+    if(avaiable_l){
+
+        output_io->write((const char *)&raw_l[0], avaiable_l*format.sampleSize()/8);
     }
-
-    if(avaiable_l)
-        output_io->write((char *)local_samples, avaiable_l);
 }
 
 void rt_snd_out_fp::config_proc(){
@@ -156,23 +189,28 @@ void rt_snd_out_fp::config_proc(){
 
     if(0 == (output_audio = new QAudioOutput(output_dev, format, this))){
 
-        qWarning() << this->objectName() << ", error!";
+        qWarning() << typeid(this).name() << "error: QAudioOutput()";
         return; //tak to neklaplo - takovy format nemame
-    }
-
-    if(0 == (M = base->setup("Slice").toInt())){ //auto?
-
-        M = output_audio->periodSize(); //automatic accroding to sampler->periodSize()
-        base->setup("__auto_slicesize", M);  //provide value to underlaying worker / buffer
     }
 
     int RR = 1000 * base->setup("__refresh_rate").toDouble();
     output_audio->setNotifyInterval(RR);  //navic mame to od byteready
 
-    this->startTimer(RR);
+    this->startTimer(RR / 2);
+
+    if(0 == (M = base->setup("Slice").toInt())){ //auto?
+
+        /*! not work, return 0 - jaka skoda, volime jednodussi nahradni vypocet
+         *  M = output_audio->periodSize() / (format.sampleSize() / 8); //automatic accroding to sampler->periodSize()
+         */
+        M = (RR * FSout) / 1000.0;
+        base->setup("__auto_slicesize", M);  //provide value to underlaying worker / buffer
+    }
 
     connect(output_audio, SIGNAL(notify()), this, SLOT(notify_proc()));
     connect(output_audio, SIGNAL(stateChanged(QAudio::State)), this, SLOT(statechanged(QAudio::State)));
+
+    N = base->setup("Multibuffer").toInt();
 }
 
 

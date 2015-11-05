@@ -26,6 +26,7 @@ private:
     int FScust;    //backup of custom sample freq
 
     int M;      //backup of last width of sample slice from setup of periodSize() from snd-dev if auto
+    int N;      //multibuffer size
 
     t_setup_entry __helper_fs_list(const QAudioDeviceInfo &out){
 
@@ -44,7 +45,7 @@ private slots:
 
     void timerEvent(QTimerEvent *event)
     {
-        qDebug() << "Timer!";
+        qDebug() << "timerEvent";
         event = event;
         notify_proc();
     }
