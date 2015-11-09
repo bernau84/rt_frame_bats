@@ -7,6 +7,7 @@
 #include "base\rt_base_slbuf_ex.h"
 
 //#define RT_SND_OUT_SIMUL_F 1200
+#define RT_SND_CACHE_LIMIT_P 25
 
 template<typename T> class t_rt_snd_out_te : public virtual i_rt_base_slbuf_ex<T> {
 
@@ -16,6 +17,8 @@ protected:
     int N;      //multibuffer length
     int fs;  //sampling freq - given vs actual
 
+    bool caching;
+
     t_rt_slice<T> row;                     /*! active row in multibuffer */
 
     using i_rt_base_slbuf_ex<T>::par;
@@ -24,6 +27,13 @@ protected:
     using i_rt_base_slbuf_ex<T>::subscribe;
 
 public:
+
+    /*! \brief for rt player signalizing not to play yet while caching data */
+    bool is_caching(){
+
+        return caching;
+    }
+
     /*! \brief format & copy samples into the multibuffer */
     virtual void update(t_rt_slice<T> &smp){
 
@@ -44,6 +54,10 @@ public:
 
             row.append(sample, smp.I[i]); //D can reduce freq. resolution because of change fs
             if(row.isfull()){  //in auto mode (M == 0) with last sample of input slice
+
+                int rds = this->readSpace(0);
+                if(rds == 0) caching = true;
+                else if(rds >= ((N*RT_SND_CACHE_LIMIT_P)/100+1)) caching = false;
 
                 buf_append(row); //write + send notifications
                 row.A.clear(); //force new row initializacion
@@ -81,7 +95,6 @@ public:
                     //but ok; user can set fixed (for wav recording for example)
 
         change();
-
         subscribe(this); //reserve fist reader for itself
     }
 

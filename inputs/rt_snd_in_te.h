@@ -1,7 +1,7 @@
 #ifndef RT_SND_IN
 #define RT_SND_IN
 
-#define RT_SND_IN_SIMUL_F   1800
+#define RT_SND_IN_SIMUL_F   440 //1800
 
 #include <stdint.h>
 #include <math.h>
